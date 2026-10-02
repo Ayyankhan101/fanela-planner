@@ -1,0 +1,68 @@
+\section{How Data Is Protected}\label{sec:integrity}
+
+\begin{plainwords}
+In a factory, history matters: who approved what, when a shipment left, how much stock
+arrived. The new system therefore never truly deletes important records -- it cancels,
+voids or corrects them with a reason, and writes it down. Two logs (stock history and
+operational audit) are append-only, even against a developer making a mistake.
+\end{plainwords}
+
+\subsection*{Integrity rules}
+
+\begin{tabularx}{\textwidth}{@{}X X@{}}
+\toprule
+\textbf{Rule} & \textbf{How it is enforced} \\
+\midrule
+No hard delete of jobs, shipments, swatch attempts, approvals, stock or audit records &
+  Application has no delete path; database role denies DELETE \\
+Stock history and audit are append-only & Insert/select-only database role; significant
+  changes store before/after snapshots as JSON \\
+Approved swatch attempts are immutable & Application rejects edits \emph{and} a
+  database row-level security policy (\texttt{FORCE ROW LEVEL SECURITY}, policy
+  \texttt{status <> 'Approved'}) makes approved rows unwritable at the engine level --
+  even if code bypasses the application layer. A blanket \texttt{REVOKE UPDATE} is not
+  used: it would also block legitimate status transitions \\
+Revising approved artwork resets it to Draft & State machine + audit entry in the same
+  transaction \\
+Embroidery blocked while a required swatch is unapproved & Stage service re-checks the
+  gate on every transition \\
+A job completes only when all stages and dispatch are complete & Computed; cannot be set
+  directly \\
+Void is not delete & The shipment keeps its booking rows; the void is an event with a
+  reason \\
+Concurrent edits are safe & Version numbers \emph{scoped to the sub-entity being
+  edited}: stages, shipments, swatch attempts and order lines have their own
+  \texttt{version} columns, so a stock receipt never conflicts with an unrelated
+  dispatch-date edit; mismatch returns 409 plus the current record \\
+Multi-step actions are atomic & Stage completion, swatch decisions, stock receipts,
+  booking/final dispatch and import confirmation all commit as one transaction \\
+Blank requirements block readiness & A blank ``screens required'' field means
+  \emph{pending specification}, never zero -- the gate stays closed \\
+Files are private & Access only through the owning record's permission check, via
+  short-lived signed links; approved swatch files are write-once; labels survive voids \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Sessions and login}
+
+\begin{itemize}
+  \item Email + password, hashed with Argon2id; multi-factor (TOTP) mandatory for Admin,
+        Operations and Dispatch; recovery codes shown once.
+  \item Server-side session cookie: http-only, secure, same-site; \textbf{2-hour idle
+        timeout} (an unattended factory terminal re-logs-in well before shift end) and
+        \textbf{12-hour absolute cap} (fresh login at the end of a long shift regardless
+        of activity); logout destroys the session row. Idle must be strictly shorter
+        than the absolute cap -- a 12 h / 12 h pairing would make the idle rule dead
+        code.
+  \item Login attempts are rate-limited per email and per address, with progressive
+        lockout; failures are logged.
+  \item Open question for the meeting: confirm the 2-hour idle value and whether shared
+        terminals also want a quick PIN re-lock screen
+        (Section~\ref{sec:decisions}).
+\end{itemize}
+
+\subsection*{Backups}
+
+Nightly database dump plus a copy of the file store, both transferred off the server,
+retained at least 30 days (period to confirm), with a documented restore procedure. The
+prototype's JSON backup remains available as an export format.

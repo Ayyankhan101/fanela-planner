@@ -1,0 +1,126 @@
+\section{How the New System Is Built}\label{sec:architecture}
+
+\begin{plainwords}
+We build one application, not many. It runs on our own server inside Docker containers:
+a web server that handles HTTPS, the application itself, a background worker for slow
+jobs like Excel exports, PostgreSQL as the single source of truth, and MinIO for files.
+Every request is checked on the server: who are you, what are you allowed to do, is this
+change valid in the current state, has someone else already edited this record.
+\end{plainwords}
+
+\subsection{Deployment on the VPS}
+
+\begin{center}
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={draw, rounded corners=2pt, align=center, minimum height=9mm,
+              inner sep=5pt, fill=plainbg, draw=plainframe},
+  arr/.style={-{Latex[length=2.5mm]}, thick}
+]
+  \node[box, minimum width=6cm] (browser) {Staff browsers (any computer)};
+  \node[box, below=8mm of browser, minimum width=6cm] (caddy) {\textbf{Caddy} -- reverse
+    proxy, HTTPS certificates};
+  \node[box, below=7mm of caddy, minimum width=6cm] (app) {\textbf{app} -- Next.js 15:
+    interface + API (route handlers)};
+  \node[box, below=7mm of app, minimum width=6cm] (worker) {\textbf{worker} -- same image:
+    Excel exports, queue jobs (pg-boss)};
+  \node[box, below=7mm of worker, minimum width=2.6cm, xshift=-1.5cm, text width=2.4cm,
+        font=\footnotesize] (pg)
+    {\textbf{PostgreSQL 16}\\operational data};
+  \node[box, below=7mm of worker, minimum width=2.6cm, xshift=1.5cm, text width=2.4cm,
+        font=\footnotesize] (minio)
+    {\textbf{MinIO}\\files, labels, imports};
+  \draw[arr] (browser) -- (caddy);
+  \draw[arr] (caddy) -- (app);
+  \draw[arr] (app) -- (worker);
+  \draw[arr] (worker.west) |- (pg.north);
+  \draw[arr] (worker.east) |- (minio.north);
+\end{tikzpicture}
+\end{center}
+
+All five containers are defined in a single Docker Compose file, started together, and
+restart on failure. Nightly jobs copy a database dump and the file store off the server.
+
+\subsection{Inside the application: modules}
+
+\begin{center}
+\begin{tikzpicture}[
+  font=\footnotesize,
+  mod/.style={draw, rounded corners=2pt, align=center, fill=plainbg,
+              draw=plainframe, inner sep=4pt, minimum height=8mm}
+]
+  \node[mod] (id) {identity\\users, roles, sessions};
+  \node[mod, right=4mm of id] (cu) {customers\\master + snapshots};
+  \node[mod, right=4mm of cu] (jb) {jobs\\lines, size grid, search};
+  \node[mod, below=4mm of id] (st) {stock\\receipt events};
+  \node[mod, right=4mm of st] (pr) {production\\stages, screens, readiness};
+  \node[mod, right=4mm of pr] (aw) {artwork\\versions, approval};
+  \node[mod, below=4mm of st] (sw) {swatch\\attempts, gate};
+  \node[mod, right=4mm of sw] (di) {dispatch\\shipments, void};
+  \node[mod, right=4mm of di] (au) {audit\\append-only logs};
+  \node[mod, below=4mm of sw] (ex) {excel\\exports, staged imports};
+  \node[mod, right=4mm of ex] (ig) {integrations\\outbox, DPD/Xero (later)};
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+  \item Route handlers stay thin: parse input $\rightarrow$ check permission $\rightarrow$
+        call the module $\rightarrow$ serialise the reply.
+  \item All business rules live inside module services -- the state machines are
+        enforced in exactly one place.
+  \item A static-analysis tool (dependency-cruiser) runs in CI and fails the build if a
+        module reaches into another module's internals.
+\end{itemize}
+
+\subsection{The five checks every API request passes}
+
+\begin{enumerate}
+  \item \textbf{Authenticated?} -- valid server-side session.
+  \item \textbf{Role permits it?} -- permission catalogue seeded in the database.
+  \item \textbf{Scope and state valid?} -- department ownership, workflow transition
+        allowed, field-level stripping applied.
+  \item \textbf{No concurrent edit?} -- record version matches, otherwise HTTP 409 with
+        the current data.
+  \item \textbf{Atomic} -- entity change and its audit entry commit in one transaction.
+\end{enumerate}
+
+\subsection{Technology choices and why (plain words)}
+
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Choice} & \textbf{Reason} \\
+\midrule
+Next.js 15 (TypeScript) & One language, one code base for interface and API; huge
+  ecosystem; well suited to server-side checks \\
+PostgreSQL 16 & The single source of truth; strong transactions; supports the job queue
+  itself \\
+Drizzle ORM & Type-safe SQL with migrations kept in the repository \\
+Auth.js + Argon2id + TOTP & No third-party identity service; passwords hashed with a
+  memory-hard algorithm; multi-factor for key roles \\
+pg-boss (no Redis) & Background jobs (exports, later integrations) queue inside
+  PostgreSQL -- one less service on a small VPS \\
+MinIO & S3-compatible file storage that runs on our own hardware; files stay private
+  behind permission checks \\
+Caddy & Automatic HTTPS certificates with almost no configuration \\
+Modular monolith (no microservices) & One factory, one deployment: faster to build,
+  easier to test, cheaper to run; modules keep the code clean and allow later extraction
+  of integration adapters \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Implementation notes for the engineering team}
+
+\begin{itemize}
+  \item \textbf{Auth.js multi-step MFA.} The Credentials provider's \texttt{authorize()}
+        handles the password only -- Auth.js has no native two-step MFA. Use a staging
+        flow: Step~1 validates the password and issues a short-lived,
+        scope-restricted \texttt{pending\_mfa} token; Step~2 validates the TOTP against
+        that token and exchanges it for the real session cookie. Users are never asked
+        for a TOTP code before their password is verified, and a
+        \texttt{pending\_mfa} token cannot call application endpoints.
+  \item \textbf{Database security migrations.} Drizzle manages tables, columns and
+        indexes -- not roles, \texttt{GRANT}/\texttt{REVOKE} or row-level security.
+        Keep a separate folder of raw SQL migrations (append-only roles,
+        \texttt{FORCE ROW LEVEL SECURITY} policies) executed after Drizzle migrations:
+        schema migration $\rightarrow$ security migration $\rightarrow$ app deploy.
+\end{itemize}

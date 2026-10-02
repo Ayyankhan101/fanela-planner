@@ -1,0 +1,20 @@
+# dependencies / build output
+node_modules/
+.next/
+coverage/
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+# os / tooling junk
+.DS_Store
+.codegraph
+*.log
+*.aux
+tikz*.pdf
+
+# runtime data (import originals, E5 storage)
+storage/uploads/
+*.tsbuildinfo

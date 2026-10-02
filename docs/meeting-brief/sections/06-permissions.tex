@@ -1,0 +1,74 @@
+\section{Who Can Do What}\label{sec:permissions}
+
+\begin{plainwords}
+Seven roles: Admin, Operations Manager, Office, Director, Dispatch, Packing and
+Department Operator. The interface hides buttons the user cannot use, but the \emph{server}
+is the judge -- every API call is checked independently, including which columns of data
+the reply may contain (for example, costs never leave the server for Office users).
+\end{plainwords}
+
+\subsection*{Roles at a glance}
+
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Role} & \textbf{Scope} \\
+\midrule
+Admin & Everything: users, roles, backups, all jobs and data \\
+Operations Manager & All jobs; approves artwork and swatches; edits dispatch; views
+  costs; audit \\
+Office & Creates/edits jobs, customer master, planned dispatch, Excel. \textbf{No}
+  buying costs \\
+Director & Read-only oversight; costs in reports only; no editing \\
+Dispatch & Dispatch details, bookings, final dispatch, void. \textbf{No} costs \\
+Packing & Read-only dispatch information and relevant stages \\
+Department Operator & Updates \textbf{own department's stage only}; no costs; no
+  approvals \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Permission matrix}
+
+Key: \textbf{Y} yes \quad \textbf{Y*} only with an extra grant \quad \textbf{R}
+read-only \quad \textbf{L} limited scope \quad \textbf{N} no
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}l c c c c c c c@{}}
+\toprule
+\textbf{Capability} & \textbf{Adm} & \textbf{Ops} & \textbf{Off} & \textbf{Dir} &
+\textbf{Dis} & \textbf{Pck} & \textbf{Dept} \\
+\midrule
+Manage users / roles / backups & Y & N & N & N & N & N & N \\
+View customer master & Y & Y & Y & Y & Y & Y & N \\
+Edit customer master & Y & Y & Y & N & N & N & N \\
+Deliberately update master & Y & Y & N & N & N & N & N \\
+Create / edit jobs & Y & Y & Y & R & L & R & N \\
+Enter buying costs & Y & Y & N & N & N & N & N \\
+View buying costs & Y & Y & N & Y* & N & N & N \\
+View selling price / tax & Y* & Y* & Y* & Y* & N & N & N \\
+Approve / revise artwork & Y & Y & N & N & N & N & N \\
+Swatch create / start / complete & Y & Y & N & N & N & N & Y* \\
+Swatch approve / reject / waive & Y & Y & N & N & N & N & N \\
+Update a stage & Y & Y & N & N & N & N & Y* \\
+Dispatch edit / book / final / void & Y & Y & plan & R & Y & R & N \\
+Excel import / export & Y & Y & Y* & L & N & N & N \\
+View audit & Y & Y & L & L & L & L & rel \\
+Stock receipt entry & Y & Y & N & N & N & N & Y* \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Y*} means an additional grant exists (``authorised commercial'' flag for prices,
+department assignment for stages/swatches).
+
+\subsection*{How it is enforced}
+
+\begin{itemize}
+  \item The matrix lives in the database (\texttt{role\_permissions}) and the same
+        catalogue drives both the interface and the API checks -- they cannot drift apart.
+  \item Every mutating endpoint is covered by automated ``permission probe'' tests: call
+        it as each role, expect exactly the right allow/deny.
+  \item Costs and prices are stripped in the serialiser before the response is built,
+        including in Excel exports (the worker decides columns at write time: Director's
+        copy includes costs, Office's copy does not).
+\end{itemize}

@@ -1,0 +1,48 @@
+\section{Delivery Phases}\label{sec:phases}
+
+\begin{plainwords}
+We build in five phases. Nothing big-bang: each phase ends with something demonstrable.
+The system becomes safe to pilot after Phase 2, complete enough to go live after Phase 3,
+and connected to DPD and Xero after Phase 4. Week ranges are planning estimates from the
+assessment document and assume the team sizes assumed there.
+\end{plainwords}
+
+\noindent
+\begin{tabularx}{\textwidth}{@{}p{3.1cm} X p{2.1cm}@{}}
+\toprule
+\textbf{Phase} & \textbf{Deliverables} & \textbf{Estimate} \\
+\midrule
+\textbf{0 -- Discovery \& domain freeze} &
+  Formal rule register from the v11 assessment, entity-relationship model, state-machine
+  diagrams, permission matrix confirmed with the client, data-quality report from the
+  backup, migration mapping, DPD/Xero scope agreement & 2--3 weeks \\
+\addlinespace
+\textbf{1 -- Secure foundation} &
+  Central authentication with roles, user management, database, customer master, job
+  creation, product grid with size allocation, search/sort, audit skeleton, file
+  storage, backups, deployment and monitoring & 4--6 weeks \\
+\addlinespace
+\textbf{2 -- Operational core} &
+  Department stages with Active/Upcoming/Blocked/Completed views, stock receipts and
+  outstanding quantities, screens readiness, print positions, traffic-light readiness,
+  queue sorting, role-restricted stage updates, stage notes/waste/reprints, role-filtered
+  Excel export, concurrency handling & 6--8 weeks \\
+\addlinespace
+\textbf{3 -- Approvals \& control (go-live MVP)} &
+  Artwork approval with versions, swatch workflow with production blocking, dispatch and
+  shipment records with part dispatch and void, central file storage, audit viewer,
+  staged Excel import, export tooling, migration executed, training & 4--6 weeks \\
+\addlinespace
+\textbf{4 -- Integrations \& optimisation} &
+  DPD API adapter (booking, labels, reprint, manual fallback), print
+  request/confirmation workflow, Xero adapter with outbox pattern, dashboards,
+  notifications, performance work & 4--8 weeks \\
+\bottomrule
+\end{tabularx}
+
+\begin{center}
+\footnotesize
+\textit{Cumulative rough timeline: limited pilot possible after $\approx$11--17 weeks;
+full go-live after $\approx$16--23 weeks; integrations complete by
+$\approx$20--31 weeks.}
+\end{center}

@@ -1,0 +1,84 @@
+\section{Moving Across: Migration and Testing}\label{sec:migration}
+
+\begin{plainwords}
+We migrate from one clean JSON backup taken from the current browser. The import is
+rehearsed first in a staging copy, counts are compared table by table, real users then
+run a checklist of everyday scenarios, and only after sign-off does the new system go
+live. The old file and backups are kept. We never invent history: if the prototype has no
+approval record, the new system will not either.
+\end{plainwords}
+
+\subsection*{Migration steps}
+
+\begin{tabularx}{\textwidth}{@{}c X X@{}}
+\toprule
+\textbf{\#} & \textbf{Action} & \textbf{Pass criterion} \\
+\midrule
+1 & Inventory: find every browser/backup, export Excel reports for comparison &
+  Newest backup identified \\
+2 & Parse the backup, count all entities, list orphans and duplicates &
+  Counts recorded \\
+3 & Map prototype schema (version 3) to the new schema; keep IDs as
+  \texttt{legacy\_id} & Mapping document complete \\
+4 & Clean master data: de-duplicate customers/products, fill missing supplier SKUs
+  (as a fix list, no invention) & Issues reviewed \\
+5 & Dry-run import into staging & All counts reconcile (customers, products, jobs
+  open/closed, lines, stages, stock, swatches, shipments, audit, files) \\
+6 & Cut-over: freeze local editing, take a final JSON backup & Backup stored \\
+7 & Import into production, verify live jobs & 20 open jobs spot-checked + full
+  UAT below \\
+8 & Create user accounts, assign roles, train staff & Sign-off \\
+9 & Retire the prototype to read-only reference; keep backups $\ge$ 90 days & ---
+\\
+\bottomrule
+\end{tabularx}
+
+\subsection*{User acceptance scenarios (also written as automated tests)}
+
+\begin{itemize}
+  \item Create customer $\rightarrow$ job $\rightarrow$ defaults copied $\rightarrow$
+        snapshot edited $\rightarrow$ deliberately update master $\rightarrow$ old jobs
+        unchanged.
+  \item Receive stock $\rightarrow$ screens confirmed $\rightarrow$ readiness moves
+        White $\rightarrow$ Amber $\rightarrow$ Green.
+  \item Readiness edge cases: stock-only job with no stock = White (not Amber);
+        blank screens field = never Green.
+  \item Approve artwork $\rightarrow$ revise $\rightarrow$ resets to Draft with audit
+        $\rightarrow$ re-approve.
+  \item Swatch: create $\rightarrow$ start $\rightarrow$ complete $\rightarrow$ approve
+        $\rightarrow$ embroidery unblocks.
+  \item Swatch: reject with reason $\rightarrow$ embroidery stays blocked $\rightarrow$
+        new attempt $\rightarrow$ approve $\rightarrow$ unblocks.
+  \item Waive swatch requirement $\rightarrow$ audit entry $\rightarrow$ embroidery
+        unblocks.
+  \item Wrong department tries a stage update $\rightarrow$ denied; own department works;
+        other stages unaffected; all stages + dispatch complete $\rightarrow$ job
+        completed.
+  \item Booking $\rightarrow$ final dispatch $\rightarrow$ second shipment (part
+        dispatch) $\rightarrow$ void first with reason $\rightarrow$ booking preserved
+        $\rightarrow$ job stays open until the explicit \textbf{Finalise dispatch}
+        action, which is rejected while any shipment is still open.
+  \item Excel export role-filtered (no cost columns for Office); import is add-only
+        (duplicates skipped, artwork starts as Draft).
+  \item Two users edit the \emph{same} sub-entity: the second save is rejected with a
+        conflict message and the current data. Two users edit \emph{different}
+        sub-entities of one job (stock receipt vs.\ dispatch date): \textbf{both
+        succeed} -- no spurious conflicts.
+  \item Permission probes: every mutating endpoint called as each role returns exactly
+        the expected allow/deny.
+\end{itemize}
+
+\subsection*{What must NOT happen}
+
+\begin{warningbox}
+\begin{enumerate}
+  \item Hosting the existing HTML file on a web server.
+  \item Letting Excel become the source of truth.
+  \item Rebuilding the operational logic from scratch instead of using v11.
+  \item Relying on client-side-only permissions.
+  \item Deleting bookings, attempts or audit records.
+  \item Starting with microservices.
+  \item Integrating DPD or Xero before the operational core is stable.
+  \item Inventing historical approvals during migration.
+\end{enumerate}
+\end{warningbox}

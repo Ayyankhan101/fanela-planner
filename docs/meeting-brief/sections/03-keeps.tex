@@ -1,0 +1,222 @@
+\section{What Stays: The Business Rules}\label{sec:keeps}
+
+\begin{plainwords}
+Everything in this section comes straight from the v11 prototype and is treated as a
+non-negotiable requirement. The new system must behave the same way -- same gates, same
+approvals, same queues -- so that staff recognise it immediately. If a rule is ever
+changed, it is a deliberate business decision, never an accident of the rebuild.
+\end{plainwords}
+
+\subsection{Customer master and order snapshots}
+
+\begin{tabularx}{\textwidth}{@{}X X@{}}
+\toprule
+\textbf{Rule} & \textbf{Why it matters} \\
+\midrule
+Customer master stores name, contact, email, phone, billing address, default dispatch
+  address, default dispatch method, account reference and notes &
+  No re-typing for repeat customers \\
+Selecting a customer copies their defaults onto the job as a \textbf{snapshot} &
+  Every order is frozen as it was taken \\
+Job contact/address/method are snapshots, not live links &
+  Old orders never change when the customer moves house \\
+``Deliberately update customer master'' is a separate, confirmed, audited action &
+  Routine order editing cannot corrupt master data \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Database consequence:} \path{customers} table is separate from
+\path{job_contact_snapshot} and \path{job_dispatch_snapshot}. The update-master
+action is its own API call that always writes an audit entry.
+
+\subsection{Job structure and product grid}
+
+\begin{itemize}
+  \item Job fields: Customer PO, Print/Job Name, Order Date, Order Type (Bulk, POD,
+        Repeat, Sample), Priority (1 = highest), assigned staff, process date,
+        dispatch date/time.
+  \item Size grid XS--5XL per product/colour line, stored as a structured table.
+  \item SKU = Manufacturer/Master Product Code; Supplier SKU kept as a separate field.
+  \item \textbf{Outstanding quantity = ordered $-$ received}, computed from stock events,
+        negative values allowed (over-delivery is real and must show).
+  \item Search by job number, customer, PO, print name, master SKU, supplier SKU.
+  \item Queue order: dispatch deadline, then priority, then process date.
+\end{itemize}
+
+\subsection{Commercial visibility (money is compartmentalised)}
+
+\begin{tabular}{@{}p{3.9cm} p{3.4cm} p{4.4cm} p{3.6cm}@{}}
+\toprule
+\textbf{Field} & \textbf{Enter} & \textbf{View} & \textbf{Never sees} \\
+\midrule
+Buying costs & Admin, Operations & Admin, Operations; Director in reports & Office,
+  Dispatch, Packing, Department Operator \\
+Selling price / tax & authorised commercial roles only & same set & everyone else \\
+\bottomrule
+\end{tabular}
+
+These are \textbf{field-level server-side permissions}: the API removes restricted fields
+from every response. Hiding columns in the interface is not enough.
+
+\subsection{Artwork approval}
+
+\begin{itemize}
+  \item Per job: proof reference, version, approval status, approved by/date, Pantone
+        notes, uploads, links, positions.
+  \item Only Admin and Operations approve or revise approved artwork. Everyone else is
+        read-only.
+  \item \textbf{Revising approved artwork resets it to Draft} and writes an audit entry
+        with before/after -- the revised work must be approved again.
+  \item Operators see production references and approval state, but cannot change them.
+\end{itemize}
+
+\textbf{State machine:}
+\begin{center}
+  \texttt{Draft $\rightarrow$ Awaiting Approval $\rightarrow$ Approved \textbar{} Rejected}
+  \qquad
+  \texttt{Approved $\xrightarrow{revision}$ Draft (new version, audited)}
+\end{center}
+
+\subsection{Embroidery swatching -- the most complex workflow}
+
+\begin{plainwords}
+Embroidery jobs need an approved sample (swatch) before full production starts. The
+embroiderers make a sample, it gets approved or rejected with a reason, rejected samples
+stay visible for learning, and approved samples can never be edited. If a required sample
+is not yet approved, the server refuses to let the embroidery stage start, progress or
+finish. Operations can waive the requirement, but only with a recorded reason.
+\end{plainwords}
+
+\begin{itemize}
+  \item Swatch required by default for embroidery jobs; waiver by Admin/Ops with audit.
+  \item Each attempt records: sample quantity, embroidery file reference, thread colours,
+        stitch count, placement, machine, notes, photos.
+  \item Workflow: start (records operator and time) $\rightarrow$ complete / request
+        approval (records user and time) $\rightarrow$ approve / reject (reason required)
+        / request re-swatch (reason required).
+  \item Rejected attempts stay visible with reason, photos and timestamps.
+  \item Approved attempts are \textbf{immutable}; another sample means a new attempt.
+  \item \textbf{Production gate:} if a swatch is required and the latest attempt is not
+        approved, every embroidery stage transition (start, progress, complete) is
+        rejected by the server with a state error.
+  \item Queue states: waiting, swatching, awaiting approval, ready for production,
+        in production.
+\end{itemize}
+
+\subsection{Department stages and job completion}
+
+\begin{itemize}
+  \item Each job has one stage per required department; stages progress independently.
+  \item Department users see only their own stages; the job detail page shows all
+        statuses for coordination.
+  \item An operator may update \textbf{only their own department's stage} (Admin and
+        Operations can override).
+  \item Stage data: notes, waste quantity, reprint quantity, quantity, progress,
+        remaining pieces, start and finish times, completing user.
+  \item Completing one stage removes it from that department's Active queue; other
+        stages stay open.
+  \item Total prints = pieces $\times$ selected print positions.
+  \item \textbf{A job only completes when every required stage is complete AND dispatch
+        is complete.} Dispatch can never be skipped.
+\end{itemize}
+
+\subsection{Readiness traffic lights (computed, never typed in)}
+
+\begin{plainwords}
+Every job shows a colour. Green means everything needed to start work is ready: stock
+received, screens made, and (for embroidery) the sample approved. White means nothing
+that the job actually needs is ready yet. Amber is in between. The colour is calculated
+by the server every time something changes -- nobody can set it by hand.
+\end{plainwords}
+
+The calculation counts only the gates that apply to the job:
+
+\begin{verbatim}
+active gates  = stock? screens? swatch?
+green         = all active gates pass
+white         = no active gate passes (or job has nothing required yet)
+amber         = some pass, some don't
+\end{verbatim}
+
+\begin{itemize}
+  \item Stock gate: every line received $\ge$ ordered.
+  \item Screens gate: made $\ge$ required. A \textbf{blank} required field means
+        ``not yet specified'' and therefore \emph{not ready} -- blank is never treated
+        as zero.
+  \item Swatch gate: not required, or latest attempt approved.
+\end{itemize}
+
+\begin{warningbox}[title={Developer note: empty-job trap}]
+  The zero-gate case must be checked \emph{before} any gate evaluation:
+  \texttt{if (totalRequiredGates === 0) return 'White'}. JavaScript array methods such as
+  \texttt{[].every(...)} return \texttt{true} on empty arrays -- relying on them makes a
+  job with no products, screens or swatches turn \textbf{Green} the moment it is created.
+\end{warningbox}
+
+\subsection{Dispatch and shipments}
+
+\begin{tabularx}{\textwidth}{@{}X X@{}}
+\toprule
+\textbf{Rule} & \textbf{Detail} \\
+\midrule
+Four methods with method-specific fields &
+  Collection (contact, phone, date, time, confirmation); DPD (consignment, parcels,
+  weights, service, instructions, labels); Same Day (courier, driver, time, ETA,
+  reference); Fanela Van (driver, route, departure, ETA) \\
+Who can edit & Dispatch + Admin/Operations; Office sets planned method/address at entry;
+  Director and Packing read-only \\
+Booking creates a shipment record & ``Record booking/collection arrangement'' saves a
+  shipment; ``record final dispatch'' records departure, user, time \\
+Guard rails & Other required stages must be finished first; Collection needs
+  confirmation; the Dispatch stage completes only via an explicit \textbf{``Finalise
+  dispatch / close shipments''} action -- one dispatched shipment among several must
+  never auto-close the stage, and finalise is rejected while any shipment is still open
+  (unless explicitly abandoned, with a reason, audited) \\
+Part dispatch & While a job is open, one shipment can be dispatched and others follow;
+  multiple shipments are kept \\
+Cancellation = event, never deletion & Void records a reason against the shipment; the
+  booking stays; no carrier-side cancellation unless later integrated \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Shipment states:}
+\begin{center}
+\texttt{Draft $\rightarrow$ Booking Arranged $\rightarrow$ Booked $\rightarrow$ Labels
+Attached $\rightarrow$ Print Requested $\rightarrow$ Labels Printed $\rightarrow$
+Dispatched / Collected}
+\end{center}
+Any non-final state can move to \texttt{Cancelled/Void} with a reason.
+
+\subsection{DPD -- honest manual mode first}
+
+No live DPD booking in the first release. The manual workflow from the prototype is kept,
+but server-stored: book with DPD externally, enter consignment and parcel details, save
+the booking \emph{first}, attach returned label files (default limit 25 MB, configurable),
+log print requests without ever claiming physical printing succeeded, then confirm
+``labels printed'' manually. Booking, tracking and labels survive failures and can be
+retried. A future API mode adds real bookings; \textbf{manual mode remains as fallback}.
+
+\subsection{Excel -- useful, but never the truth}
+
+\begin{itemize}
+  \item Exports (all jobs, filtered, department, stock/shortage, swatches, shipments,
+        audit) are generated on the server and filtered by the caller's permissions.
+  \item Historical quantities in reports are snapshots -- \textbf{never summed as stock
+        movements}.
+  \item Imports are add-only: checked before confirmation, duplicates skipped, imported
+        artwork starts as Draft.
+  \item Never reconstructed from Excel: historical swatch approvals, shipment records,
+        photos, audit history.
+\end{itemize}
+
+\subsection{Audit and stock history -- two separate append-only logs}
+
+\begin{enumerate}
+  \item \textbf{Stock history} -- receipts, adjustments, corrections with reason, user,
+        timestamp. Never edited, never deleted.
+  \item \textbf{Operational audit} -- job/header, priority, order lines, artwork,
+        screens, swatch, stage, customer master, dispatch, shipment and approval
+        changes, with before/after snapshots.
+\end{enumerate}
+Department users see the entries relevant to their work; sensitive commercial changes
+stay restricted.

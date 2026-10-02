@@ -1,0 +1,47 @@
+\section{Executive Summary}
+
+\begin{plainwords}
+Today we run the production planner as a single HTML file opened in one browser. All data,
+orders, passwords and history sit inside that browser. If the browser cache is cleared,
+everything disappears. Two people cannot work on the same job at the same time, and nothing
+stops a user from changing something they should not.
+
+We will keep every business rule the planner already teaches us -- exactly as they are -- and
+move them into a proper central web system: one database on our own server, real logins,
+real permissions enforced by the server, automatic backups, and room to connect DPD and
+Xero later. The prototype is the specification; the plumbing is what changes.
+\end{plainwords}
+
+\subsection*{The project in one line}
+
+\textbf{Preserve the operational logic of v11. Replace the browser-local trust model with a
+secure, central, multi-user system.}
+
+\subsection*{Headline decisions already taken}
+
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Topic} & \textbf{Decision} \\
+\midrule
+Architecture & Single application (modular monolith). One code base, clear internal
+  modules. No microservices. \\
+Stack & Next.js 15 (TypeScript) + PostgreSQL 16, Drizzle ORM \\
+Authentication & Built into the system: email + password (Argon2id), one-time-code (TOTP)
+  multi-factor for key roles \\
+File storage & MinIO (private S3-compatible storage, runs on our server) \\
+Background jobs & pg-boss (job queue inside PostgreSQL -- no Redis needed) \\
+Hosting & Our own VPS with Docker Compose: Caddy (HTTPS) + app + worker + PostgreSQL +
+  MinIO \\
+Scope of first release & Full operational MVP (customers, jobs, stock, stages, artwork,
+  swatching, dispatch, audit, Excel) \\
+After go-live & DPD API integration, then Xero integration \\
+Migration & One clean JSON backup from the prototype, imported with reconciliation \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{What this document covers}
+
+Sections~\ref{sec:current} to~\ref{sec:decisions} explain, first in everyday language and
+then in full detail: what we have now, what stays, what changes, how the new system is
+built, who can do what, how data is protected, how we move across, and what we still need
+to decide together.

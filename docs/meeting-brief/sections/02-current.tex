@@ -1,0 +1,47 @@
+\section{What We Have Right Now}\label{sec:current}
+
+\begin{plainwords}
+The Fanela Planner v11 is one HTML file (about 300 KB) that runs inside a web browser.
+It has been improved at least eleven times, and each version added real factory rules:
+how orders are recorded, how sizes are allocated, how artwork is approved, how embroidery
+samples block production, how shipments are tracked.
+
+It works -- but only inside the browser that opened it. Data lives in the browser's local
+storage. Accounts and passwords are stored locally. Attachments are limited to 2 MB.
+There is no sync between computers, no central backup, and no server to stop a user from
+bending the rules. Clearing browser storage deletes everything.
+\end{plainwords}
+
+\subsection*{What the prototype does well}
+
+\begin{itemize}
+  \item Captures years of hard-won operational detail that would take months of workshops
+        to rediscover.
+  \item Encodes complex controls: customer snapshots, artwork approval, embroidery swatch
+        gating, department queues, dispatch records, append-only stock history.
+  \item Honest about its limits -- for example it states clearly that DPD booking is
+        manual and there is no live API.
+\end{itemize}
+
+\subsection*{What limits it}
+
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+Limitation & Consequence \\
+\midrule
+Browser-local storage & One machine, one browser. No teamwork, no sync \\
+Local accounts and passwords & No real identity, no multi-factor, no central revocation \\
+Client-side permissions & Anyone with developer tools can bypass role restrictions \\
+Manual backups & Easy to lose everything; no point-in-time recovery \\
+Attachments in browser (2 MB) & Photos and labels barely fit; lost with the browser \\
+No concurrency handling & Two users editing the same job silently overwrite each other \\
+Audit stored locally & Not tamper-resistant; can vanish with the browser \\
+DPD and Xero & Manual, disconnected processes \\
+\bottomrule
+\end{tabularx}
+
+\begin{warningbox}
+Hosting the existing HTML file on a web server would solve none of the above. It would
+still be browser-local storage with no multi-user safety. That path is explicitly ruled
+out (see anti-patterns, Section~\ref{sec:migration}).
+\end{warningbox}

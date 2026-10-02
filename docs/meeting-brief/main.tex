@@ -1,0 +1,108 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric}
+\usepackage[most]{tcolorbox}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black,
+  pdftitle={Fanela Central System -- Project Briefing},
+  pdfauthor={Project Team}
+}
+
+\definecolor{plainbg}{RGB}{235,244,254}
+\definecolor{plainframe}{RGB}{70,130,200}
+\definecolor{plaintitle}{RGB}{30,80,150}
+\definecolor{warnbg}{RGB}{255,244,230}
+\definecolor{warnframe}{RGB}{210,140,50}
+
+% "In plain words" callout box
+\newtcolorbox{plainwords}[1][]{%
+  enhanced,
+  colback=plainbg,
+  colframe=plainframe,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={In plain words},
+  attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=plainframe, arc=1pt},
+  arc=2pt,
+  boxrule=0.8pt,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  breakable,
+  #1
+}
+
+\newtcolorbox{warningbox}[1][]{%
+  enhanced,
+  colback=warnbg,
+  colframe=warnframe,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title={Careful},
+  attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=warnframe, arc=1pt},
+  arc=2pt,
+  boxrule=0.8pt,
+  left=6pt, right=6pt, top=4pt, bottom=4pt,
+  breakable,
+  #1
+}
+
+\newcommand{\arrow}{\,\(\rightarrow\)\,}
+\newcommand{\yes}{Yes}
+\newcommand{\no}{No}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=2pt, topsep=3pt}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=2pt, topsep=3pt}
+
+\title{\textbf{Fanela Central System}\\[4pt]
+  \large From Browser Prototype to Production Platform\\[2pt]
+  \normalsize Project Briefing for Meeting}
+\author{Project Team}
+\date{27 September 2026}
+
+\begin{document}
+
+\maketitle
+\vfill
+\begin{center}
+  \small
+  Source documents:\\
+  \texttt{docs/superpowers/specs/2026-09-27-fanela-central-system-design.md} (design spec)\\
+  \texttt{Fanela\_Internal\_Production\_Planner\_v11.html} (prototype)\\
+  \texttt{Fanela\_Planner\_v11\_Operations\_Guide.pdf} (operations guide)
+\end{center}
+\vspace{1cm}
+\newpage
+
+\tableofcontents
+\newpage
+
+\input{sections/01-summary}
+\input{sections/02-current}
+\input{sections/03-keeps}
+\input{sections/04-changes}
+\input{sections/05-architecture}
+\input{sections/06-permissions}
+\input{sections/07-integrity}
+\input{sections/08-migration}
+\input{sections/09-phases}
+\input{sections/10-decisions}
+
+\end{document}

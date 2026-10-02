@@ -1,0 +1,39 @@
+\section{What Changes: The Plumbing}\label{sec:changes}
+
+\begin{plainwords}
+Nothing in Section~\ref{sec:keeps} is an accident -- it is business behaviour. Everything
+in this section is a \emph{technical} limitation of running inside a browser. These are
+the parts we replace.
+\end{plainwords}
+
+\noindent
+\begin{tabularx}{\textwidth}{@{}p{4.6cm} X c@{}}
+\toprule
+\textbf{Today (v11)} & \textbf{New system} & \textbf{Priority} \\
+\midrule
+All data in browser local storage & Central PostgreSQL database & Critical \\
+No sync between computers & Central web app, everyone works simultaneously & Critical \\
+Local accounts with local password hashes & Server authentication, Argon2id + TOTP
+  multi-factor & Critical \\
+Permissions only hide buttons & Server-side RBAC at every API endpoint, including
+  field-level rules & Critical \\
+Clearing the browser deletes everything & Nightly backups copied off the server &
+  Critical \\
+Attachments in browser, 2 MB limit & MinIO object storage, 25 MB default, access-checked
+  links & High \\
+No concurrent-edit handling & Version numbers; conflicting saves rejected with a clear
+  message (HTTP 409) & High \\
+Audit stored locally & Server append-only audit with before/after snapshots & High \\
+Migration depends on browser access & Controlled import from the JSON backup with
+  reconciliation & High \\
+DPD manual-only, button disabled & Manual mode kept (server-stored); API adapter later &
+  Medium \\
+No Xero & Outbox-pattern adapter after go-live & Medium \\
+Browser print dialog & Stored label files, print-request log, confirmed-print events &
+  Medium \\
+Excel done in the browser & Server-generated exports, staged/validated imports &
+  Medium \\
+No monitoring & Structured logs, health checks, uptime monitoring & Medium \\
+No notifications & Later: e-mail/in-app alerts for approvals and blocked stages & Low \\
+\bottomrule
+\end{tabularx}

@@ -1,0 +1,51 @@
+# Phase 0 — Open Items & Findings Tracker
+
+Spec §19 items OI-1…OI-8 + code-analysis findings F4…F11.
+**RESOLVED 2026-09-30: client accepted all defaults ("all defaults").** Status column records the locked decision.
+
+---
+
+## A. Open items (spec §19)
+
+| ID | Question | **Locked decision** | Status |
+|---|---|---|---|
+| **OI-1** | Who may see buying costs / holds `authorised commercial`? | Director = reports only; no holders beyond Admin/Ops/Office/Director cells in 04 | ☑ decided |
+| **OI-2** | Final roles + departments? | **9 departments** (Option 1) + **7 roles**; mapping 04 Part B | ☑ decided |
+| **OI-3** | Blank screens `required` semantics? | Blank = not-yet-specified = gate NOT passed (G4); Amber + hint in UI | ☑ decided |
+| **OI-4** | Order types beyond spec? | Spec list exhaustive {Bulk, POD, Repeat, Sample}; extras → notes | ☑ decided |
+| **OI-5** | Retention? | Audit/stock **indefinite append-only**; backups 30d; prototype artefacts 90d | ☑ decided |
+| **OI-6** | Import dedupe / re-import? | Dedupe `job_number` + `SKU`; re-import allowed, existing skipped (E3) | ☑ decided |
+| **OI-7** | Session timeouts? | 2h idle / 12h absolute (spec values) | ☑ decided |
+| **OI-8** | Data location / migration source? | **No data exists yet.** Data arrives later → self-service import screen (Phase 3); contract in 05 §1; full dump preferred, jobs-only rejected | ☑ decided |
+
+## B. Findings from prototype code analysis
+
+| ID | Finding | **Locked resolution** | Status |
+|---|---|---|---|
+| **F4** | v11 "Archive" hard-deletes job (L230) | New system: `jobs.archived` flag only, no delete path; historical loss accepted | ☑ ack |
+| **F5** | Code 9 departments vs spec 6 keys | Keep 9; seed enum from 04 Part B; spec §6 corrected at kickoff (implementation plan Step A2) | ☑ ack |
+| **F6** | Code 13 roles vs spec 7 | Mapping table 04 Part B; legacy roles recreate as Department Operator + dept | ☑ ack |
+| **F9** | Backup button = jobs only (L248) | Import screen rejects shape D with F9 message (05 §1); dump instructions retained | ☑ ack |
+| **F7** | `ensureDispatch` auto-adds Dispatch stage | Keep as spec J9 — no action | ☑ noted |
+| **F8** | Readiness formula differs in edge cases | Verify via **fixtures FX-5** (no real data) during Phase 2 tests | ☑ closed |
+| **F10** | v11 vs spec swatch status names | Mapping fixed in 03 §5 | ☑ closed |
+| **F11** | No shipment state enum in v11 | Inference table 06 §4; preview lists inferred states for human confirm at import | ☑ ack |
+| **T1** | J4 (stock outstanding) + J9 (completion gating) P1 tests blocked — need stock service / stage machines | P2 shipped stock service + stage machine; skips replaced with real tests | ☑ closed (2026-10-01 P2) |
+
+## C. Phase-0 exit checklist
+
+- [x] Client decisions recorded — all defaults accepted (2026-09-30)
+- [x] F4/F5/F6/F9/F11 acknowledged
+- [x] Data strategy replaced: no data now → 05 rewritten as data contract + fixture inventory
+- [x] Permission matrix 04 signed (defaults)
+- [x] Implementation plan written — `docs/superpowers/plans/2026-09-30-fanela-implementation-plan.md`
+- [x] 01–08 final review → Phase 1 starts
+
+## D. Status log
+
+| Date | Event |
+|---|---|
+| 2026-09-29 | 01–04, 06–08 drafted from spec + prototype analysis; 05 blocked on data (F9) |
+| 2026-09-30 | **All defaults accepted.** 04 signed, 05 → data contract + fixtures, OI/F statuses locked |
+| 2026-10-01 | P1 test-gap session: 01 flipped C4/B3–B6/J5/J7 to ✓; J4/J9 → P2 (T1). Test suite 113 pass / 2 skip |
+| 2026-10-01 | **P2 Gates + History done**: readiness/stock/stages/artwork/swatch/dispatch/audit services + 14 routes; optimistic-lock `current` on all 409s; RLS approve-transition fix; tests/rules-a,s,h,l + concurrency + probe-p2; J4/J9 un-skipped; 01 flipped G/A/S/D/H/L/P + J4/J9 → ✓. **195 pass / 0 skip**, lint + tsc clean. Fixes found by tests: receipt/correction version bump, audit `order-lines` filter on action not entity_type, part_dispatched from open, stock_status snapshot after event |
