@@ -22,6 +22,20 @@
       "when": 1790828876443,
       "tag": "0002_lethal_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790952936602,
+      "tag": "0003_lonely_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790987981760,
+      "tag": "0004_clever_hawkeye",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,5 @@
+# UNUSED — kept for reference only. Homebrew PostgreSQL 18.4 is the source of
+# truth for local dev (see README.md). Drift tracked in TODOS.md (dev-DB drift).
 services:
   postgres:
     image: postgres:16-alpine
