@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fanela
+          # trust: test owner-pools connect over TCP without a libpq password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres@localhost:5432/fanela
+      APP_DATABASE_URL: postgres://fanela_app@localhost:5432/fanela
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      SEED_ADMIN_EMAIL: admin@fanela.local
+      SEED_ADMIN_PASSWORD: ChangeMe123!
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install postgres client (psql for db:security)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap database (migrate → security/RLS → seed)
+        run: |
+          npm run db:migrate
+          npm run db:security
+          npm run db:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test

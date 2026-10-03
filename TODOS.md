@@ -28,7 +28,11 @@ Open items discovered during development. Checked = done.
 **Priority:** P0
 **Depends on:** None
 
+**C3 gate record (2026-10-03, P4 close):** Owner = **unassigned** (placeholder per client instruction — replace with a real name when known); target date = **2026-10-17**. No real dataset exists yet; CEO C2 `analyze-backup.mjs` fires the moment a sample arrives.
+
 ### Operator demo at P3 close
+
+**Recorded 2026-10-03 (C5):** operator = **project owner (client) — solo run**; flow = job-create → dispatch through the P3 screen; half-day max; date booked by owner (P3 closed 2026-10-03). Status: scheduled.
 
 **What:** One named operator runs job-create → dispatch through the P3 screen (half-day max); schedule at P3 close.
 
@@ -54,6 +58,8 @@ Open items discovered during development. Checked = done.
 
 ### Adoption/success metric definition
 
+**Defined 2026-10-03 (C7, client decision):** TWO metrics kept (client chose both over the plan's single-metric default): **(1) median minutes/job entry** (baseline legacy vs Fanela), **(2) % of live production jobs tracked in Fanela**. Owner: **project owner (client)** for both. Measured at cutover.
+
 **What:** Define ONE success metric with the user (e.g. median minutes/job entry, or % of live jobs in the system); owner named; record it here and in the plan before cutover.
 
 **Why:** Native CEO 5.1/R3 — without a metric, "done" is undefined and the build-vs-buy check (C9) has nothing to measure against.
@@ -65,6 +71,8 @@ Open items discovered during development. Checked = done.
 **Depends on:** None
 
 ### Build-vs-buy kill criterion (record now, review at P3 close)
+
+**Triggers recorded 2026-10-03 (C9, client decision):** revisit build-vs-buy if a **commercial print MIS covers ≥80% of the 77 register rules at ≤ £200/month**; review checkpoint = **P4 close (2026-10-03, this run)** — no MIS offer evaluated yet → checkpoint logged, no kill.
 
 **What:** Record objective kill/revisit triggers NOW (e.g. commercial print MIS covers ≥N% of the 77 rules at a stated $/mo); review them at P3 close, before P5 integrations.
 
