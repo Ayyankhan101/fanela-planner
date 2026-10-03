@@ -7,13 +7,14 @@ import { loginBlocked, recordLogin } from "@/lib/auth/rate-limit";
 import { createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
 import { clientIp, err } from "@/lib/http";
 import { MFA_COOKIE, MFA_TTL_MS, MFA_MANDATORY_ROLES } from "@/lib/auth/mfa";
+import { MSG_INVALID_REQUEST, CODE_INVALID_REQUEST } from "@/lib/errors";
 
 const body = z.object({ email: z.string().email(), password: z.string().min(1) });
 
 export async function POST(req: Request) {
   const ip = clientIp(req);
   const parsed = body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(400, "Invalid request.");
+  if (!parsed.success) return err(400, MSG_INVALID_REQUEST, CODE_INVALID_REQUEST);
   const email = parsed.data.email.toLowerCase();
 
   const blocked = await loginBlocked(email, ip);
