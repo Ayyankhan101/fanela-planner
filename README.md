@@ -11,7 +11,7 @@ npm install                                # 1. dependencies
 createdb fanela                            # 2. database (peer-auth local role)
 #    + role: CREATE ROLE fanela LOGIN PASSWORD 'fanela_dev';   # 3. TCP role matching .env (or run once with psql)
 cp .env.example .env                       # 4. runtime contract (edit DATABASE_URL if needed)
-npm run setup                              # 5. migrate → security → seed → lint → typegen → typecheck → test
+npm run setup                              # 5. migrate → security → seed → lint → typecheck → test
 npm run dev                                # 6. http://localhost:3000
 ```
 
@@ -46,13 +46,13 @@ then re-run `npm run db:seed` — the first-run branch in `db/seed.mts` re-arms 
 | `npm run dev` | Next.js dev server | http://localhost:3000 serves the login page | port 3000 already in use? |
 | `npm run build` / `start` | Production build / serve | build completes, server boots | same |
 | `npm run lint` | ESLint over the repo | silent exit 0 | run again — file:line listed |
-| `npm run typecheck` | `tsc --noEmit` (run `npm run typegen` first on a fresh clone — `.next/types` route globals don't exist yet) | silent exit 0 | first type error listed |
+| `npm run typecheck` | `next typegen && tsc --noEmit` (typegen runs automatically — fresh clones get `.next/types` route globals) | silent exit 0 | first type error listed |
 | `npm test` / `test:watch` | vitest (needs live PG) | `N passed` | DB up? `.env` `DATABASE_URL` reachable? |
 | `npm run db:generate` | Drizzle schema → SQL migration files | new `db/migrations/*.sql` | schema import errors |
 | `npm run db:migrate` | Apply pending migrations (`node db/migrate.mjs`) | `applied N migration(s)` / already-migrated | `DATABASE_URL` reachable? |
 | `npm run db:security` | **Applies RLS/grants via `db/migrate-all.sh`** — name mismatch is intentional: script says *migrate-all*, the step it adds is *security* (schema → `fanela_app` role → grants → RLS, spec §6.3 order) | `done (schema → role → grants → rls)` | first failing `db/security/*.sql` printed by `psql -v ON_ERROR_STOP=1`; if the role is missing: does `SELECT 1 FROM pg_roles WHERE rolname='fanela_app'` return a row? |
 | `npm run db:seed` | Idempotent seed (`tsx db/seed.mts`) | `admin recovery codes (shown once): …` (first run) or quiet pass | `DATABASE_URL`; check `users` row exists |
-| `npm run setup` | `db:migrate` → `db:security` → `db:seed` → lint → typegen → typecheck → test (D6 golden path) | test tail green | walk the chain — first failing step's table row above |
+| `npm run setup` | `db:migrate` → `db:security` → `db:seed` → lint → typecheck → test (D6 golden path; typecheck runs typegen first) | test tail green | walk the chain — first failing step's table row above |
 
 ## API
 
