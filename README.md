@@ -127,9 +127,9 @@ Grouped by HTTP class — every value the API can emit (the Error & Rescue Regis
 2. Split the dump (per date range or entity) or re-export the source in ≤ 25 MB parts, then upload each part as its own batch.
 3. The 25 MB cap is fixed by design — do not raise it.
 
-## Docker compose
+## Database
 
-`docker-compose.yml` is **unused** — Homebrew PostgreSQL 18.4 is the source of truth for local dev (its header comment says so). The compose/DB drift is tracked in `TODOS.md` (dev-DB drift entry).
+Local dev + tests use **Homebrew PostgreSQL 18.4** — the single source of truth (CI uses `postgres:18`, same major; verified green 2026-10-03). The unused `docker-compose.yml` (PG16) was removed when the dev-DB drift gate closed (`TODOS.md` → Completed).
 
 ## Docs map
 
