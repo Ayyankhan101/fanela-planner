@@ -3,6 +3,7 @@ import { listJobs } from "@/lib/services/jobs";
 import { getSessionUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/access";
 import { JobCreateForm } from "./create-form";
+import { ExportDropdown } from "../export-dropdown";
 
 export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
   const raw = (await searchParams).q;
@@ -11,6 +12,7 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
   if (!user) return null;
   const jobs = await listJobs({ q: q || undefined });
   const canEdit = hasPermission(user, "jobs.edit");
+  const canExport = hasPermission(user, "import.export");
 
   return (
     <div className="space-y-6">
@@ -26,6 +28,7 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
           <button className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
             Search
           </button>
+          {canExport && <ExportDropdown q={q} />}
         </form>
       </div>
 

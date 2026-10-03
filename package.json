@@ -1,6 +1,6 @@
 {
   "name": "fanela-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,16 +13,17 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node db/migrate.mjs",
     "db:security": "./db/migrate-all.sh",
-    "db:seed": "tsx db/seed.mts"
+    "db:seed": "tsx db/seed.mts",
+    "setup": "npm run db:migrate && npm run db:security && npm run db:seed && npm run lint && npm run typegen && npm run typecheck && npm test",
+    "typegen": "next typegen"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
     "drizzle-orm": "^0.45.3",
+    "exceljs": "^4.4.0",
     "next": "16.3.7",
-    "next-auth": "^5.0.0-beta.32",
     "otpauth": "^9.5.2",
     "pg": "^8.23.0",
-    "pg-boss": "^12.35.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "^4.6.5"

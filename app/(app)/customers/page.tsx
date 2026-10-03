@@ -2,6 +2,7 @@ import { query } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/access";
 import { CustomerCreateForm } from "./create-form";
+import { ExportDropdown } from "../export-dropdown";
 
 export default async function CustomersPage() {
   const user = await getSessionUser();
@@ -11,10 +12,14 @@ export default async function CustomersPage() {
        FROM customers WHERE active = true ORDER BY name`,
   );
   const canEdit = hasPermission(user, "customers.edit");
+  const canExport = hasPermission(user, "import.export");
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Customers</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Customers</h1>
+        {canExport && <ExportDropdown />}
+      </div>
       {canEdit && <CustomerCreateForm />}
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <table className="w-full text-left text-sm">
