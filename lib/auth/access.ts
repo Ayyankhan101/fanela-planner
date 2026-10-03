@@ -1,7 +1,8 @@
 import type { SessionUser } from "@/lib/auth/session";
 import { ROLE_PERMISSIONS, DEPARTMENT_SCOPED, type Permission, type RoleKey, type DepartmentKey } from "@/lib/permissions";
+import { MSG_UNAUTHENTICATED, CODE_UNAUTHENTICATED, type ErrorCode } from "@/lib/errors";
 
-export type AuthError = { status: 401 | 403 | 409 | 422; message: string };
+export type AuthError = { status: 401 | 403 | 409 | 422; message: string; code?: ErrorCode };
 
 // Does user hold permission at all (any role union)?
 export function hasPermission(user: SessionUser, perm: Permission): boolean {
@@ -31,5 +32,5 @@ export function isAdminOrOps(user: SessionUser): boolean {
 }
 
 export function require401(user: SessionUser | null): AuthError | null {
-  return user ? null : { status: 401, message: "Sign in required." };
+  return user ? null : { status: 401, message: MSG_UNAUTHENTICATED, code: CODE_UNAUTHENTICATED };
 }

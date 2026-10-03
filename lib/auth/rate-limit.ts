@@ -1,6 +1,6 @@
 import { query } from "@/lib/db";
 
-// Progressive lockout: 5 fails/15min per email → lock 15 min; 20 fails/15min per IP → lock 1 h.
+// Progressive lockout: 5 fails/15min per email → lock 15 min; 20 fails/15min per IP → blocked while the 15-min window holds ≥20.
 export async function loginBlocked(email: string, ip: string): Promise<string | null> {
   const emailFails = await query<{ n: string }>(
     `SELECT count(*)::int AS n FROM login_attempts
@@ -31,4 +31,21 @@ export async function recordLogin(email: string, ip: string, success: boolean): 
     ip,
     success,
   ]);
+}
+
+// Import upload throttle (T13): UPLOAD_RATE_LIMIT uploads / 60 min per user.
+const UPLOAD_LIMIT = Number(process.env.UPLOAD_RATE_LIMIT ?? 100);
+const UPLOAD_WINDOW_MIN = 60;
+
+export async function uploadBlocked(userId: string): Promise<string | null> {
+  const res = await query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM upload_attempts
+      WHERE user_id = $1 AND ts > now() - ($2 || ' minutes')::interval`,
+    [userId, String(UPLOAD_WINDOW_MIN)],
+  );
+  return Number(res[0].n) >= UPLOAD_LIMIT ? "rate_limited" : null;
+}
+
+export async function recordUpload(userId: string): Promise<void> {
+  await query(`INSERT INTO upload_attempts (user_id) VALUES ($1)`, [userId]);
 }
