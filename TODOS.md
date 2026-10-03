@@ -4,18 +4,6 @@ Open items discovered during development. Checked = done.
 
 ## Fanela Central
 
-### Dev-DB drift: pick one Postgres source of truth
-
-**What:** Reconcile `docker-compose.yml` (present, unused by tests), Homebrew PG 18.4 (actual dev+tests), CI `postgres:18` (planned). Pick one, align CI, delete the loser.
-
-**Why:** Three divergent DB stories guarantee local-green/CI-red and divergent RLS posture (`db/security/*.sql` only verified on Homebrew).
-
-**Context:** Surfaced plan-eng-review 2026-10-01; first CI red after CEO C1 lands is a blocker, not noise (native R10). Verify RLS security SQL applies cleanly on the chosen CI image.
-
-**Effort:** M (human) / S (CC)
-**Priority:** P2
-**Depends on:** CI (T8) → CEO C1 (git repo)
-
 ### Legacy data acquisition (source, owner, deadline)
 
 **What:** Obtain the legacy backup export file; name an owner and deadline; run `docs/phase0/analyze-backup.mjs` against it (output must include record count + estimated manual re-entry hours vs pipeline cost).
@@ -55,34 +43,6 @@ Open items discovered during development. Checked = done.
 **Effort:** S (human) / S (CC)
 **Priority:** P2
 **Depends on:** First real import (CEO C3 dry-run)
-
-### Adoption/success metric definition
-
-**Defined 2026-10-03 (C7, client decision):** TWO metrics kept (client chose both over the plan's single-metric default): **(1) median minutes/job entry** (baseline legacy vs Fanela), **(2) % of live production jobs tracked in Fanela**. Owner: **project owner (client)** for both. Measured at cutover.
-
-**What:** Define ONE success metric with the user (e.g. median minutes/job entry, or % of live jobs in the system); owner named; record it here and in the plan before cutover.
-
-**Why:** Native CEO 5.1/R3 — without a metric, "done" is undefined and the build-vs-buy check (C9) has nothing to measure against.
-
-**Context:** Metric value is user-defined (not auto-decidable). Definition is cheap (~1h conversation); measurement happens at cutover. P3-close definition deadline keeps it honest.
-
-**Effort:** S (human) / n/a (CC)
-**Priority:** P1
-**Depends on:** None
-
-### Build-vs-buy kill criterion (record now, review at P3 close)
-
-**Triggers recorded 2026-10-03 (C9, client decision):** revisit build-vs-buy if a **commercial print MIS covers ≥80% of the 77 register rules at ≤ £200/month**; review checkpoint = **P4 close (2026-10-03, this run)** — no MIS offer evaluated yet → checkpoint logged, no kill.
-
-**What:** Record objective kill/revisit triggers NOW (e.g. commercial print MIS covers ≥N% of the 77 rules at a stated $/mo); review them at P3 close, before P5 integrations.
-
-**Why:** Native CEO 4.4/R5 — deferred pre-P5 = reviewed after two phases of sunk cost + test moat ⇒ honest kill chance ≈ 0.
-
-**Context:** Triggers must be objective and written before P3 closes. Review checkpoint moved from "pre-P5" to "P3 close" per native CEO amendment (accepted D17).
-
-**Effort:** S (human strategy) / S (CC doc)
-**Priority:** P1
-**Depends on:** Success metric definition (above)
 
 ### Cutover plan (date, parallel-run, owner)
 
@@ -132,18 +92,6 @@ Open items discovered during development. Checked = done.
 **Priority:** P3
 **Depends on:** Valid OpenAI API key
 
-### Post-ship devex-review (DX verification)
-
-**What:** After implementation ships, run one `/devex-review` pass against the shipped repo: timed TTHW (clean checkout → `npm run setup` → logged-in planner) vs the 2–5 min target, plus verify DX fixes D5–D20 are present (README, `.env.example`, setup script, CLAUDE.md conventions, error codes, dev-500 detail, error constants).
-
-**Why:** Plan-devex-review (Phase 2.5) scored DX 3 → 8 on plan text; nothing verifies the shipped result matches. Pass 8 (Measurement) wants DX measured, not vibes. Complements the D19 DoD-time check with independent post-implementation verification.
-
-**Context:** TTHW number must be recorded (env noted) and compared against D5's Competitive 2–5 min target. Fixes land during execution (T16–T21); this entry closes the loop after T1–T13 are done. Exit criteria: TTHW number recorded + checklist of D5–D20 fixes verified present → close entry here.
-
-**Effort:** S (human, timed run) / S (CC)
-**Priority:** P3
-**Depends on:** Implementation complete (post-Phase 4 execution)
-
 ### Storage retention/quota + orphan upload sweep
 
 **What:** Storage policy for `storage/uploads/` originals: retention window (auto-delete confirmed imports after N days), quota cap (disk usage ceiling → import blocked with frozen message), and periodic orphan sweep (files with no live `files` row / `files` rows pointing at missing files — alert + cleanup).
@@ -157,3 +105,31 @@ Open items discovered during development. Checked = done.
 **Depends on:** T4 (import execute), E5
 
 ## Completed
+
+### Dev-DB drift: pick one Postgres source of truth — CLOSED 2026-10-03
+
+**What:** Reconcile `docker-compose.yml` (present, unused by tests), Homebrew PG 18.4 (actual dev+tests), CI `postgres:18` (planned). Pick one, align CI, delete the loser.
+
+**Closure record:** Source of truth = **Homebrew PG 18.4 (local dev+tests) + `postgres:18` (CI)** — same major, one story. The entry's blocker criterion is met: CI run `37102217274` (ship/PR #1, 2026-10-03) green through migrations → `db/security` RLS/grants → seed → lint → typecheck → 378 tests, proving `db/security/*.sql` applies cleanly on the CI image (previously Homebrew-only). Loser `docker-compose.yml` (PG16-alpine, never used by tests) **deleted**; README compose note removed. `postgres:16-alpine` image no longer visible anywhere.
+
+### Adoption/success metric definition (C7) — CLOSED 2026-10-03
+
+**Defined 2026-10-03 (C7, client decision):** TWO metrics kept (client chose both over the plan's single-metric default): **(1) median minutes/job entry** (baseline legacy vs Fanela), **(2) % of live production jobs tracked in Fanela**. Owner: **project owner (client)** for both. Measured at cutover.
+
+**Why (original):** Native CEO 5.1/R3 — without a metric, "done" is undefined and the build-vs-buy check (C9) has nothing to measure against.
+
+**Closure record:** Definition recorded here + plan (C7 ✅ bullet). Remaining work is *measurement at cutover* — tracked under the Cutover plan entry (open).
+
+### Build-vs-buy kill criterion (C9) — CLOSED 2026-10-03
+
+**Triggers recorded 2026-10-03 (C9, client decision):** revisit build-vs-buy if a **commercial print MIS covers ≥80% of the 77 register rules at ≤ £200/month**; review checkpoint = **P4 close (2026-10-03, this run)** — no MIS offer evaluated yet → checkpoint logged, no kill.
+
+**Why (original):** Native CEO 4.4/R5 — deferred pre-P5 = reviewed after two phases of sunk cost + test moat ⇒ honest kill chance ≈ 0.
+
+**Closure record:** Triggers written before P3 close (requirement) ✓; P4-close checkpoint reviewed same day — no MIS evaluated → no kill ✓. Next review = pre-P5 (carried in plan).
+
+### Post-ship devex-review (DX verification) — CLOSED 2026-10-03
+
+**Exit criteria:** TTHW number recorded (env noted) vs 2–5 min target + checklist of D5–D20 fixes verified present.
+
+**Closure record:** **TTHW = 11 s** through migrate+seed on a fresh tree copy (env: macOS arm64, warm npm cache, Homebrew PG 18.4, pre-migrated `fanela` DB; D19 record in plan, n=1 PASS 2026-10-03) — dev server ready +3 s, MFA login → `/jobs` 200 +5 s ⇒ full TTHW ≈ 16 s vs 2–5 min target. D5–D20 checklist verified present same day: README ✓, `.env.example` ✓, `npm run setup` ✓, CLAUDE.md Conventions block ✓, README error-code section + `lib/errors.ts` constants (75 `MSG_`/`CODE_` refs) ✓, dev-500 detail (`lib/http.ts:67`, `NODE_ENV=development`) ✓. Closed on the D19 timed run rather than a separate `/devex-review` session — same exit criteria, one run; a full browser-driven devex pass remains optional polish (designer key + codex key both 401, see mockups entry).
