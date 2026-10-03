@@ -139,6 +139,7 @@ export function ImportWizard() {
   async function onFile(file: File) {
     setBanner(null);
     setStale(false);
+    setTyped("");
     setBusy(true);
     setStatus("Uploading and validating…");
     const res = await fetch("/api/admin/import", {
@@ -443,7 +444,9 @@ export function ImportWizard() {
           typedRequired={typedRequired}
           typedOk={typedOk}
           busy={busy}
-          onConfirmTyped={() => action("execute", { typedCount: Number(typed) })}
+          onConfirmTyped={() =>
+            action("execute", typed.trim() === "" ? {} : { typedCount: Number(typed) })
+          }
           onBack={() => setStep(preview ? "preview" : "upload")}
           onDiscard={() => action("discard")}
           showCounts={!!preview}
@@ -479,6 +482,12 @@ export function ImportWizard() {
             >
               Download errors CSV
             </a>
+            <button
+              onClick={() => setStep("upload")}
+              className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              Import another file
+            </button>
           </div>
         </section>
       )}
