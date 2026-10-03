@@ -445,7 +445,10 @@ export function ImportWizard() {
           typedOk={typedOk}
           busy={busy}
           onConfirmTyped={() =>
-            action("execute", typed.trim() === "" ? {} : { typedCount: Number(typed) })
+            action(
+              "execute",
+              typedRequired && typed.trim() !== "" ? { typedCount: Number(typed) } : {},
+            )
           }
           onBack={() => setStep(preview ? "preview" : "upload")}
           onDiscard={() => action("discard")}
@@ -483,7 +486,12 @@ export function ImportWizard() {
               Download errors CSV
             </a>
             <button
-              onClick={() => setStep("upload")}
+              onClick={() => {
+                setStep("upload");
+                setFileName(null);
+                setBanner(null);
+                setStale(false);
+              }}
               className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
             >
               Import another file
