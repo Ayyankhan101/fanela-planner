@@ -7,14 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node db/migrate.mjs",
     "db:security": "./db/migrate-all.sh",
     "db:seed": "tsx db/seed.mts",
-    "setup": "npm run db:migrate && npm run db:security && npm run db:seed && npm run lint && npm run typegen && npm run typecheck && npm test",
+    "setup": "npm run db:migrate && npm run db:security && npm run db:seed && npm run lint && npm run typecheck && npm test",
     "typegen": "next typegen"
   },
   "dependencies": {
