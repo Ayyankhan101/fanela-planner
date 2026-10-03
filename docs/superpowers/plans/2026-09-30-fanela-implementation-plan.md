@@ -36,7 +36,7 @@ docs/           spec, phase0, meeting-brief (unchanged)
 
 **DoD:** tests for rules C1–C4, J1–J9, B3–B6 green; permission probe suite (7 roles × endpoints) green. ✅
 
-### P1.5 — Prerequisite hardening (new, before P3)
+### P1.5 — Prerequisite hardening (DONE 2026-10-02, 201 tests: withTransaction + ambient tx + dep cleanup)
 - **[7A]** `withTransaction(fn)` in `lib/db.ts` (pool.connect → BEGIN/COMMIT/ROLLBACK); wrap the 5 spec §14-line-406 atomic sites: stock receipt/correction, stage completion + job rollup, swatch decision, shipment transition, artwork revise. Failure-injection test: mid-tx throw → rollback, state unchanged. Existing 195 tests must stay green.
 - **[8A]** `npm uninstall next-auth pg-boss` (zero source usage verified). pg-boss reinstalls with P5.
 
@@ -66,8 +66,8 @@ Upload ──► Parse ──► Validate ──► Preview ──► Confirm �
 - **[3A]** Migration: `import_batches.version integer NOT NULL DEFAULT 1`; confirm/execute guard `WHERE status=… AND version=$n` → 0 rows = 409 + `current` (matches every P2 sub-entity).
 - **[4A]** Upload: check `Content-Length`/`file.size` early → **413 beyond 25 MB** (spec size decision line 510); spike test for Next 16 proxy truncation >1MB — set `next.config` body-size only if reproduced; header check alone skips chunked bodies — add a streaming size guard (chunked 26MB → 413 test) [X3]. Parse enforces the **50,000-row cap → 4xx + frozen message** (`lib/errors.ts` constant [T21]) [X1].
 - **[5A]** **Admin/Ops UI** (E6 — plan's original "Admin-only" corrected); probe: admin/ops=200, director/office/dispatch/dept=403, anon=401.
-- **[17A]** During execute, inside the batch transaction: `updateReadinessCache(jobId)` per imported job (one pass — same tx as import, no post-commit crash window); reconciliation asserts `readiness_cache` non-null + FX-5 colours.
-- **[14A]** Reconciliation **automated**: `tests/reconciliation.test.ts` imports FX-1…11 through the same route handlers the screen calls → per-table count assertions → Δ=0 **+ spot-assert N sampled rows against the fixture (job_number, customer, date — count parity can hide mangled values)** (FX-10 500 jobs; explicit per-test timeout override — vitest default `testTimeout: 15_000` is not generous enough).
+- **[17A]** During execute, inside the batch transaction: `updateReadinessCache(jobId)` per imported job (one pass — same tx as import, no post-commit crash window); reconciliation asserts `readiness_cache` non-null + FX-5 colours. **✅ done 2026-10-03 — tests/reconciliation.test.ts (12 green; suite 375).**
+- **[14A]** Reconciliation **automated**: `tests/reconciliation.test.ts` imports FX-1…11 through the same route handlers the screen calls → per-table count assertions → Δ=0 **+ spot-assert N sampled rows against the fixture (job_number, customer, date — count parity can hide mangled values)** (FX-10 500 jobs; explicit per-test timeout override — vitest default `testTimeout: 15_000` is not generous enough). **✅ done 2026-10-03 — tests/reconciliation.test.ts (12 green; suite 375).**
 - **[13A]** `tests/rules-e.test.ts` explicit rows, contract-faithful to `phase0/05 §2`: (1) shape A/B/C → preview renders; (2) shape D → 4xx + exact F9 message string; (3) FX-9 severities per `05 §2` — new dup job_number → error (block row), existing-in-DB job_number → skip (E3), bad date → error, orphan ref → warn, blank SKU → warn — preview places rows by severity (create/skip/error counted; warn/info listed with badge, non-blocking); (4) mid-execute SQL failure → rollback + `failed` + `errors[]`; (5) E4: import writes no swatch/shipment/photo/audit-history rows (table-count asserts); (6) cancel at preview → zero writes; (7) TOCTOU: colliding `job_number` inserted AFTER preview → execute re-validates inside the tx and downgrades to skip (batch succeeds, skip count bumped — never a raw SQL failure) [X2]; (8) state-machine matrix: discard→re-upload, discard→resume→confirm (stale version → 409), resume→stale-confirm [T5].
 - **[ENG A2] Parse persists validated rows:** parsed row set + severities stored at Parse (`import_batches.parsed jsonb` or `import_batch_rows`), bounded by the import row cap; Preview pagination/CSV, Resume-after-restart and the error CSV all read persisted rows — no 25MB re-parse per page; restart-session test: expired cookie → re-login → Resume shows identical preview [X4].
 - Reconciliation report in admin UI (counts table).
@@ -83,11 +83,13 @@ Upload ──► Parse ──► Validate ──► Preview ──► Confirm �
 - **[M4]** column stripping at write time (worker decides columns; never generate-then-redact).
 - Reports on snapshots (**E2**).
 - **[12A]** `tests/uat.test.ts`: spec §14 acceptance suite (Excel round-trip row, MFA row, remaining un-taken checkpoint rows).
-- **[CEO C7]** Success metric defined with a named owner before cutover (definition tracked in `TODOS.md`, P1; value is user-defined).
+- **[CEO C7]** Success metric defined with a named owner before cutover (definition tracked in `TODOS.md`, P1; value is user-defined). **✅ 2026-10-03:** two metrics kept (client chose both): median minutes/job entry + % live jobs in Fanela; owner = project owner (client); recorded in TODOS.
 - **[15A]** Tests: unknown view → 4xx (no default fallthrough); 9 views × 7 roles allow/deny (reuse `assertClasses` probe pattern); **M4 assert re-parses the workbook** (exceljs re-read + sharedStrings/cell scan — raw byte scan of a zipped xlsx is vacuously green): generated workbook contains no cost column (`Buying Cost`, `unit_price`) across **all 9 views** (jobs/filtered-jobs/department/stock-shortage/swatches/shipments/audit/customers/products — full coverage nearly free with the re-parse harness) [T1]; **E7**: audit export hides order-lines cost rows; **E2**: report snapshot rows immutable after job edit.
 
 **DoD:** [11A] **E1, E2, E7** + export-permission matrix tests; **M1–M4** green (M1–M3 via `tests/rules-m.test.ts`, M4 proven at file level by re-parsing the workbook); uat.test.ts green; **T15 export dropdown shipped** + buffer-then-send (no truncated downloads) per UI Design Contract.
-- **DX close [D19]:** T16–T21 complete and the timed cold-start run recorded vs the 2–5 min target (global DoD line) — first D19 run gates P4 close.
+- **DX close [D19]:** T16–T21 complete and the timed cold-start run recorded vs the 2–5 min target (global DoD line) — first D19 run gates P4 close. **✅ D19 run 1 recorded 2026-10-03 (see below) — PASS.**
+  - **D19 run 1 (2026-10-03, n=1, PASS):** env macOS arm64, warm npm cache, Homebrew PG 18.4 up, existing migrated+seeded `fanela` DB, `.env` present; cold start = tree copy to `/var/folders/.../opencode/d19` (no `.git` commit of current work — per DoD “else copy the tree”). `npm install` 7s (warm cache; an initial cold-network attempt was SIGTERM'd at 10 min before cache filled — cold-cache install NOT in this n=1); migrate+security+seed **4s → wall-through-seed = 11s vs 2–5 min target ✓**; tail: lint 4s, typegen 2s, typecheck 3s, test 16s (378/378); `next dev -p 3001` ready 3s; two-step login (password → TOTP) → `/jobs` planner **200**, total dev+login 5s (16s cold-copy→planner).
+  - **Miss found + fixed before close:** fresh-copy `npm run typecheck` failed (`PageProps`/`LayoutProps` unknown — `.next/types` route globals absent on a clean tree) → added `typegen` script (`next typegen`) to `npm run setup` before typecheck + README notes (line 14/49/55). Re-run in cold copy: typegen 2s, tsc OK.
 
 ### P5 — Later (gated)
 - DPD API (prereq D1–D6), Xero (X1–X5) via outbox — **reinstall pg-boss here**; notifications/dashboards after schema stable. Cutover plan (target date, parallel-run exit criteria, legacy-shutdown owner) required before go-live — tracked in `TODOS.md`.
@@ -189,44 +191,44 @@ No git repo yet — lanes are sequencing guidance for when version control lands
 Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship.
   Priority tags: **P1** blocks ship · **P2** same branch · **P3** follow-up/TODO — priorities, not phase numbers (execution order: **T12 gate FIRST at the autoplan Phase 4 approval gate**, then T1→P1.5; T3→T4 [T2 lands with T4], T5, T6, T7→P3; T9 may start at P3 entry — no data dependency; T10, T13→P4; DX round 2: T21→T20 before T4 (freeze [13A] string literals first), T16/T17/T18 before the first D19 timed run at P4 close, T19 anytime, T14 pre-P4).
 
-- [ ] **T1 (P1, human: ~3h / CC: ~30min)** — db/lib — Add `withTransaction` + **ambient transaction client in `query()`** (`query()` hardwires `pool.query`; use AsyncLocalStorage context so services/audit/readiness called inside `fn` run on the tx client, not a different session) and wrap 5 spec-atomic sites + failure-injection test
+- [x] **T1 (P1, human: ~3h / CC: ~30min)** — db/lib — Add `withTransaction` + **ambient transaction client in `query()`** (`query()` hardwires `pool.query`; use AsyncLocalStorage context so services/audit/readiness called inside `fn` run on the tx client, not a different session) and wrap 5 spec-atomic sites + failure-injection test
   - Surfaced by: Code quality — spec line 406 atomicity vs `lib/db.ts` query()-only multi-writes (stock.ts:45/266/271 etc.); outside F1 (mechanism unstated → [17A] rebuild would read outside the tx)
   - Files: `lib/db.ts`, `lib/services/{stock,stages,swatch,dispatch,artwork}.ts`, `db/schema/audit.ts` (audit writes inside tx)
   - Verify: `npm test` (195 green) + rollback test + same-session assertion: batch execute's audit row + `updateReadinessCache` observe uncommitted tx state + ALS-detached helper called outside `fn` documents fallback (no silent phantom reads) [A4]
-- [ ] **T2 (P1, human: ~1h / CC: ~10min)** — db — Add `import_batches.version` + CAS guard on confirm/execute (version bumps on re-upload/re-preview — a content change — so a stale preview cannot execute)
+- [x] **T2 (P1, human: ~1h / CC: ~10min)** — db — Add `import_batches.version` + CAS guard on confirm/execute (version bumps on re-upload/re-preview — a content change — so a stale preview cannot execute)
   - Surfaced by: Architecture — spec line 405 per-sub-entity version missing (`db/schema/audit.ts:38-49`); outside F9 (semantics undefined)
   - Files: `db/migrations/`, `db/schema/audit.ts`, `lib/services/import.ts` (created by T4 — land the guard with T4)
   - Verify: double-confirm 409 test; re-preview → stale-confirm 409 test (exercises a real version bump); state-machine matrix discard→resume→confirm + resume→stale-confirm → 409 [T5]
-- [ ] **T3 (P1, human: ~2h / CC: ~30min)** — fixtures — Build `fixtures/generate.mjs` FX-1…11
+- [x] **T3 (P1, human: ~2h / CC: ~30min)** — fixtures — Build `fixtures/generate.mjs` FX-1…11
   - Surfaced by: Plan P3 bullet; `phase0/05 §4` inventory
   - Files: `fixtures/generate.mjs`
-  - Verify: `node fixtures/generate.mjs` emits 11 valid files
-- [ ] **T4 (P1, human: ~1d / CC: ~3h)** — import — Import pipeline (service+route+UI) per **UI Design Contract (Phase 2)**: atomic execute (single-flight per user via pg advisory lock; `SET LOCAL statement_timeout` inside the execute tx — pool `max: 10` + long txs would otherwise head-of-line block every route), readiness rebuild, audit+batch row, **original-file persistence — write-through at Upload (write file → `files` row → Parse; execute only flips batch state; disk write ordered before tx commit — tx fail keeps the original per E5, post-commit file-missing asserted by test; file readable pre-execute; local disk, non-web-served; `files.bucket='local'` + relative key) [E5]**, screen anatomy + stepper + batch history (Resume/Discard) + state-table copy + typed confirm (≥50 rows OR warn, count-back) + issues-first preview (≤200 rows) + severity tokens + a11y/responsive rules
+  - Verify: `node fixtures/generate.mjs` emits 11 valid files ✓ (11/11 shape-A, analyzer exit 0, FX-01/09 flags confirmed, 2026-10-02)
+- [x] **T4 (P1, human: ~1d / CC: ~3h)** — import — Import pipeline (service+route+UI) per **UI Design Contract (Phase 2)**: atomic execute (single-flight per user via pg advisory lock; `SET LOCAL statement_timeout` inside the execute tx — pool `max: 10` + long txs would otherwise head-of-line block every route), readiness rebuild, audit+batch row, **original-file persistence — write-through at Upload (write file → `files` row → Parse; execute only flips batch state; disk write ordered before tx commit — tx fail keeps the original per E5, post-commit file-missing asserted by test; file readable pre-execute; local disk, non-web-served; `files.bucket='local'` + relative key) [E5]**, screen anatomy + stepper + batch history (Resume/Discard) + state-table copy + typed confirm (≥50 rows OR warn, count-back) + issues-first preview (≤200 rows) + severity tokens + a11y/responsive rules
   - Surfaced by: Architecture 6A diagram/failure lines; Performance 17A readiness cache; design F1–F11, F15–F16 (Q1.1/Q2.1/Q2.2/Q7.1–Q7.3)
   - Files: `lib/services/import.ts`, `app/api/admin/import/route.ts`, `app/(app)/admin/import/page.tsx`, `app/(app)/nav.tsx`, `storage/uploads/`, `db/schema/audit.ts` + migration (parsed-row persistence [A2]), authorized GET route for original file + error CSV (CSV writer neutralizes leading `=`/`+`/`-`/`@` [S2])
   - Verify: `npm test` — E3/E5/E6 rows + readiness colours + uploaded file readable from `storage/uploads/` pre-execute and post-execute + [13A] confirm-with-errors row + over-cap (50,001 rows) → 4xx [X1] + wrong typed count → 4xx [H2] + path-traversal: `files` key `../../etc/passwd` → 404, DB-key-only lookup [S4] + CSV formula-injection fixture `=cmd|'/c calc'!A0` round-trips inert [S2] + keyboard/emulated-viewport pass over wizard
-- [ ] **T5 (P1, human: ~30min / CC: ~15min)** — import — Upload 25MB cap → 413 + truncation spike test
+- [x] **T5 (P1, human: ~30min / CC: ~15min)** — import — Upload 25MB cap → 413 + truncation spike test
   - Surfaced by: Architecture — spec line 510; Next 16 proxy footgun (conf 7/10)
   - Files: import route, `next.config.ts` (only if spike reproduces), `tests/rules-e.test.ts`
   - Verify: 26MB file → 413 (Content-Length path) + chunked 26MB body → 413 (streaming guard — header check alone skips chunked) [X3]
-- [ ] **T6 (P1, human: ~30min / CC: ~10min)** — import — E6 permission probe (admin/ops 200; others 403; anon 401)
+- [x] **T6 (P1, human: ~30min / CC: ~10min)** — import — E6 permission probe (admin/ops 200; others 403; anon 401)
   - Surfaced by: Architecture 5A — plan said Admin-only vs register E6
   - Files: `tests/rules-e.test.ts`
   - Verify: `npm test`
-- [ ] **T7 (P2, human: ~10min / CC: ~5min)** — deps — Uninstall `next-auth` + `pg-boss`
+- [x] **T7 (P2, human: ~10min / CC: ~5min)** — deps — Uninstall `next-auth` + `pg-boss`
   - Surfaced by: Code quality — zero source usage; pg-boss returns at P5
   - Files: `package.json`
   - Verify: `npm ls next-auth pg-boss` empty; `npm test` green
-- [ ] **T8 (P1, human: ~30min / CC: ~10min)** — ci — Add `.github/workflows/ci.yml` (lint + typecheck + test, postgres 18 service + bootstrap: `db:migrate` + `db:security` + `db:seed` with `DATABASE_URL` — without these the first run is red regardless of CEO C1)
+- [x] **T8 (P1, human: ~30min / CC: ~10min)** — ci — Add `.github/workflows/ci.yml` (lint + typecheck + test, postgres 18 service + bootstrap: `db:migrate` + `db:security` + `db:seed` with `DATABASE_URL` — without these the first run is red regardless of CEO C1)
   - Surfaced by: Architecture — P1 promised CI (plan line 26), none exists
   - Blocked on CEO C1 (git repo + remote; autoplan Phase 4 approval gate, pre-execution) — conditional until approved
   - Files: `.github/workflows/ci.yml`
   - Verify: `ci.yml` valid; lint/typecheck/test commands run green locally; first workflow run deferred until C1 exists
-- [ ] **T9 (P1, human: ~1d / CC: ~3h)** — export — Generic `/api/exports/[view]`: 9-view enum, ExcelJS, single-query-per-view, M4 write-time stripping, **buffer-then-send (Q7.4: full workbook in memory before headers — no truncated downloads; [CEO C4] spike peak RSS = ceiling evidence) + row-cap guard: ≥100,000 rows → abort before buffer blowup → non-2xx → inline banner (D18 knob row; final number validated by the C4 spike) [A3]** (first step **[CEO C4]**: 60-min ExcelJS spike — 10k-row workbook with styling + the M4 column-strip running on the production writer path, record peak RSS + wall time)
+- [x] **T9 (P1, human: ~1d / CC: ~3h)** — export — Generic `/api/exports/[view]`: 9-view enum, ExcelJS, single-query-per-view, M4 write-time stripping, **buffer-then-send (Q7.4: full workbook in memory before headers — no truncated downloads; [CEO C4] spike peak RSS = ceiling evidence) + row-cap guard: ≥100,000 rows → abort before buffer blowup → non-2xx → inline banner (D18 knob row; final number validated by the C4 spike) [A3]** (first step **[CEO C4]**: 60-min ExcelJS spike — 10k-row workbook with styling + the M4 column-strip running on the production writer path, record peak RSS + wall time)
   - Surfaced by: Step-0 decision; Issues 9A/16A; ExcelJS decision
   - Files: `app/api/exports/[view]/route.ts`, `lib/services/export.ts`
   - Verify: `npm test` — export matrix + unknown-view 4xx + `tests/rules-m.test.ts` (M1–M3 cost-gate rows; M4 via parse-based workbook assert)
-- [ ] **T10 (P2, human: ~2h / CC: ~30min)** — uat — `tests/uat.test.ts` (spec §14) + tracker P2 §14 retro-log row
+- [x] **T10 (P2, human: ~2h / CC: ~30min)** — uat — `tests/uat.test.ts` (spec §14) + tracker P2 §14 retro-log row
   - Surfaced by: Tests 12A — P2 checkpoint never logged
   - Files: `tests/uat.test.ts`, `docs/phase0/08-open-items-tracker.md`
   - Verify: `npm test`
@@ -234,44 +236,56 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: TODO candidate 1 (approved A) + CEO D5–D7, D9, D12 + native R4/R11
   - Files: `TODOS.md`
   - Verify: file exists, format matches gstack `review/TODOS-format.md` (`~/.claude/skills/gstack/review/`), all eight entries present — done 2026-10-01 in Phase 1
-- [ ] **T12 (P1, human: ~5min / CC: ~2min)** — gate — Surface the CEO C1 decision at the autoplan Phase 4 approval gate **before execution starts (runs FIRST of T1–T12)**, three options: **A** full C1 (git init + remote + baseline commit + branch protection), **B** local-only baseline commit (no remote — strictly smaller ask, still needs your permission), **C** no git (T8/CI deferred; T12 appends a TODOS entry); approved → unblocks T8
+- [x] **T12 (P1, human: ~5min / CC: ~2min)** — gate — Surface the CEO C1 decision at the autoplan Phase 4 approval gate **before execution starts (runs FIRST of T1–T12)**, three options: **A** full C1 (git init + remote + baseline commit + branch protection), **B** local-only baseline commit (no remote — strictly smaller ask, still needs your permission), **C** no git (T8/CI deferred; T12 appends a TODOS entry); approved → unblocks T8
   - Surfaced by: CEO Step 0 D1/C1 (User Challenge — never auto-decided) + native R1 (local-git middle option) + outside F7 (gate ran last)
   - Files: `docs/superpowers/plans/2026-09-30-fanela-implementation-plan.md` (Review record) + `TODOS.md` if rejected/C
   - Verify: autoplan Phase 4 gate output names the CEO C1 decision and the chosen option explicitly; if rejected/C, TODOS.md carries the CI deferral
 
-- [ ] **T13 (P2, human: ~1h / CC: ~15min)** — security — Auth security checklist in two gates: **P3-close subset (hard — first stateful admin write ships with P3): CSRF strategy on stateful handlers + upload endpoint authz + upload rate limit** (as-built mitigations verified: SameSite=Lax + HttpOnly, but no origin check/token yet); **pre-P4 remainder: cookie flags (Secure), session fixation/rotation, full rate-limit posture**; record per-item pass/fail in the Review record, failures → tickets
+- [x] **T13 (P2, human: ~1h / CC: ~15min)** — security — Auth security checklist in two gates: **P3-close subset (hard — first stateful admin write ships with P3): CSRF strategy on stateful handlers + upload endpoint authz + upload rate limit** (as-built mitigations verified: SameSite=Lax + HttpOnly, but no origin check/token yet); **pre-P4 remainder: cookie flags (Secure), session fixation/rotation, full rate-limit posture**; record per-item pass/fail in the Review record, failures → tickets
+  - **P3-close record (2026-10-02):**
+    - CSRF strategy on stateful handlers — **PASS**: `proxy.ts` (Next 16 `middleware.ts` convention is deprecated in 16.3 and breaks `/api` responses — codemod `middleware-to-proxy`) checks Origin (Referer fallback) on POST/PUT/PATCH/DELETE under `/api/*` → 403 `csrf_origin_mismatch` (`MSG_CSRF_ORIGIN_MISMATCH`); as-built cookie flags verified `SameSite=Lax` + `HttpOnly` (`lib/auth/session.ts sessionCookieOptions`); absent Origin/Referer = non-browser client → allowed (no CSRF surface) — design note; live-verified: evil-origin POST → 403, same-origin → 401 auth path intact
+    - Upload endpoint authz — **PASS** (as-built, no code change): `requireAdminOrOps` gates POST+GET `/api/admin/import`; rules-e covers office/director/dispatch/packing/dept → 403 `forbidden_admin_ops`; anon 401 asserted in `tests/security-p3.test.ts`
+    - Upload rate limit — **PASS**: `upload_attempts` table (migration `0004`, `002_grants` INSERT+SELECT + REVOKE UPDATE/DELETE/TRUNCATE, append-only `login_attempts` precedent) + `uploadBlocked`/`recordUpload` in `lib/auth/rate-limit.ts` (window 60 min, `UPLOAD_RATE_LIMIT` default 100/user/hour) → 429 `rate_limited` before any write; tested in `tests/security-p3.test.ts`
+    - Failures → tickets: **none** (pre-P4 remainder — Secure flag, session fixation/rotation, full rate-limit posture — stays gated at P4 close)
+  - **pre-P4 remainder record (2026-10-03):**
+    - Cookie flags (Secure) — **PASS**: `sessionCookieOptions` = `httpOnly: true`, `sameSite: "lax"`, `secure: NODE_ENV === "production"`, `path: "/"`; MFA pending cookie `sameSite: "strict"` + httpOnly + secure-in-prod; test asserts flags + Secure flips true under `NODE_ENV=production` (`tests/security-p3.test.ts`)
+    - Session fixation/rotation — **PASS** (as-built, no code change): `createSession` always issues `randomUUID()` sid at each privilege boundary (password → MFA challenge cookie ≠ session; MFA verify → new session row); login `Set-Cookie` overwrites any planted pre-login sid; logout deletes row → re-login rotates sid — asserted: planted-attacker-sid overwritten, logout-row-gone, re-login sid ≠ old sid
+    - Full rate-limit posture — **PASS**: login 5 fails/15 min/email → `account_locked` + 20/15 min/IP → `ip_locked`, `login_attempts` logged (B5, `tests/rules-b.test.ts`); upload 100/hour/user → 429 `rate_limited` before any write (`tests/security-p3.test.ts`); CSRF origin 403 (P3-close record); MFA verify throttled by pending-row TTL (single-use attempt row) — no extra limiter per rule register
+    - Failures → tickets: **none**
   - Surfaced by: Native CEO R6 — 195 tests prove behavior, not security
   - Files: `lib/auth.ts`, `lib/http.ts`, `app/api/admin/import/route.ts`, `tests/`
   - Verify: checklist completed pre-P4 with per-item result; any FAIL fixed or ticketed
-- [ ] **T14 (P2, human: ~5min / CC: ~2min)** — design — Fix `app/globals.css:25` body font: use declared Geist vars (`--font-geist-sans`) or DM Sans; remove `Arial, Helvetica, sans-serif`
+- [x] **T14 (P2, human: ~5min / CC: ~2min)** — design — Fix `app/globals.css:25` body font: use declared Geist vars (`--font-geist-sans`) or DM Sans; remove `Arial, Helvetica, sans-serif`
   - Surfaced by: Design review Pass 4 (universal rule — default font stack as body font) + Q4.1 decision
   - Files: `app/globals.css`
   - Verify: computed body font-family ≠ Arial; `npm run lint` + typecheck green
-- [ ] **T15 (P1, human: ~2h / CC: ~30min)** — design/export — Export dropdown UI: header component on jobs/customers pages, 9 human-labelled views filtered by [15A] role matrix, carries current `?q=` for `filtered-jobs`, filename `view-YYYY-MM-DD.xlsx`, disabled + "Preparing…" while in flight, inline error banner on non-2xx (per UI Design Contract)
+- [x] **T15 (P1, human: ~2h / CC: ~30min)** — design/export — Export dropdown UI: header component on jobs/customers pages, 9 human-labelled views filtered by [15A] role matrix, carries current `?q=` for `filtered-jobs`, filename `view-YYYY-MM-DD.xlsx`, disabled + "Preparing…" while in flight, inline error banner on non-2xx (per UI Design Contract)
   - Surfaced by: Design Pass 1 F12 (Q1.2) + Pass 2 export states (Q2.2)
   - Files: `app/(app)/jobs/page.tsx`, `app/(app)/customers/page.tsx`, new `app/(app)/export-menu.tsx`
   - Verify: manual — dropdown lists only permitted views; filtered-jobs carries query; keyboard-navigable; `npm test` [15A] matrix still green
-- [ ] **T16 (P1, human: ~2.5h / CC: ~40min)** — docs — Create `README.md`: quickstart (prereqs incl. PostgreSQL → install → `createdb fanela` + PG role/auth note → `.env` ← `.env.example` → `npm run setup` → `npm run dev` → http://localhost:3000, ≤7 commands), script table (every script, incl. `db:security` = applies RLS/grants via `db/migrate-all.sh` — note the name mismatch: script says migrate-all, step is security — success signal + failure first-check), first-login block (dev admin `admin@fanela.local` / `ChangeMe123!` + dev TOTP `JBSWY3DPEHPK3PXP` + recovery codes note — dev-only, override via `SEED_ADMIN_*`), reset-dev-MFA block (`UPDATE users SET totp_secret=NULL, recovery_codes=NULL WHERE email=…` → re-run `db:seed` re-arms via `db/seed.mts:54` first-run branch), compose note (unused — Homebrew PG 18.4 is source of truth; drift item in TODOS) + header comment in `docker-compose.yml` marking it unused, API endpoint table + one curl per family (auth/jobs/import chain upload→preview→confirm→execute/export) + `{error, code}` envelope + **error-code section** (every code value from `lib/errors.ts`, grouped by class 413/F9/409/500 — the README anchors for the Error & Rescue Registry) + >25MB legacy-dump procedure (record size in D12 `analyze-backup.mjs`; split/re-export source to ≤25MB — cap fixed by design) + known-limit line (no error→skip downgrade in preview — edit source rows and re-upload) + docs map (one line per `docs/` file), TTHW target line (2–5 min cold start)
+- [x] **T16 (P1, human: ~2.5h / CC: ~40min)** — docs — Create `README.md`: quickstart (prereqs incl. PostgreSQL → install → `createdb fanela` + PG role/auth note → `.env` ← `.env.example` → `npm run setup` → `npm run dev` → http://localhost:3000, ≤7 commands), script table (every script, incl. `db:security` = applies RLS/grants via `db/migrate-all.sh` — note the name mismatch: script says migrate-all, step is security — success signal + failure first-check), first-login block (dev admin `admin@fanela.local` / `ChangeMe123!` + dev TOTP `JBSWY3DPEHPK3PXP` + recovery codes note — dev-only, override via `SEED_ADMIN_*`), reset-dev-MFA block (`UPDATE users SET totp_secret=NULL, recovery_codes=NULL WHERE email=…` → re-run `db:seed` re-arms via `db/seed.mts:54` first-run branch), compose note (unused — Homebrew PG 18.4 is source of truth; drift item in TODOS) + header comment in `docker-compose.yml` marking it unused, API endpoint table + one curl per family (auth/jobs/import chain upload→preview→confirm→execute/export) + `{error, code}` envelope + **error-code section** (every code value from `lib/errors.ts`, grouped by class 413/F9/409/500 — the README anchors for the Error & Rescue Registry) + >25MB legacy-dump procedure (record size in D12 `analyze-backup.mjs`; split/re-export source to ≤25MB — cap fixed by design) + known-limit line (no error→skip downgrade in preview — edit source rows and re-upload) + docs map (one line per `docs/` file), TTHW target line (2–5 min cold start)
   - Surfaced by: DX review D5/D6/D8/D9/D15/D16/D20 (plan-devex-review Phase 2.5)
   - Files: `README.md`
   - Verify: fresh-clone walkthrough top-to-bottom; every command copy-pastes clean; no step requires opening a second file
-- [ ] **T17 (P2, human: ~20min / CC: ~5min)** — env — Create `.env.example` with the actual runtime contract: `DATABASE_URL` (required), `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (optional, dev defaults), `APP_DATABASE_URL` (optional — test-only app-role override, defaults to fanela_app TCP URL per `tests/db-security.test.ts:8`); README env table mirrors it and notes `AUTH_SECRET` in existing `.env` is vestigial (sessions are DB-backed — nothing reads it)
+- [x] **T17 (P2, human: ~20min / CC: ~5min)** — env — Create `.env.example` with the actual runtime contract: `DATABASE_URL` (required), `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (optional, dev defaults), `APP_DATABASE_URL` (optional — test-only app-role override, defaults to fanela_app TCP URL per `tests/db-security.test.ts:8`); README env table mirrors it and notes `AUTH_SECRET` in existing `.env` is vestigial (sessions are DB-backed — nothing reads it)
   - Surfaced by: DX D5 + native DX7 (undocumented second var)
   - Files: `.env.example`, `README.md`
   - Verify: `cp .env.example .env`, fill `DATABASE_URL` → all scripts run; grep of app source shows no undeclared `process.env.*` var (except `NODE_ENV`)
-- [ ] **T18 (P2, human: ~15min / CC: ~5min)** — scripts — Add `npm run setup`: `db:migrate` → `db:security` → `db:seed` → lint → typecheck → test (the D6 golden path; timing source for the D19 acceptance line); D19 timing rule: wall time counted through `db:seed` completion (login reachable), lint/typecheck/test phase recorded separately — suite runtime is not part of the 2–5 min TTHW target
+- [x] **T18 (P2, human: ~15min / CC: ~5min)** — scripts — Add `npm run setup`: `db:migrate` → `db:security` → `db:seed` → lint → typecheck → test (the D6 golden path; timing source for the D19 acceptance line); D19 timing rule: wall time counted through `db:seed` completion (login reachable), lint/typecheck/test phase recorded separately — suite runtime is not part of the 2–5 min TTHW target
   - Surfaced by: DX D6 (magical moment = one command)
   - Files: `package.json`
   - Verify: `npm run setup` on prepared env exits 0; wall time recorded against the 2–5 min target
-- [ ] **T19 (P2, human: ~30min / CC: ~10min)** — docs/agent — Extend `CLAUDE.md` with a **Conventions** block: add-an-endpoint recipe (`requirePermission`/`requireAdminOrOps` → service fn in `lib/services/` → `err(status, message, code)` → probe test via `assertClasses` pattern), error-contract pointer, test-bootstrap note (live PG required); plus a one-line `AGENTS.md` pointer to that block (the Codex half of the pair reads AGENTS.md, not CLAUDE.md)
+- [x] **T19 (P2, human: ~30min / CC: ~10min)** — docs/agent — Extend `CLAUDE.md` with a **Conventions** block: add-an-endpoint recipe (`requirePermission`/`requireAdminOrOps` → service fn in `lib/services/` → `err(status, message, code)` → probe test via `assertClasses` pattern), error-contract pointer, test-bootstrap note (live PG required); plus a one-line `AGENTS.md` pointer to that block (the Codex half of the pair reads AGENTS.md, not CLAUDE.md)
   - Surfaced by: DX D10 (conventions live only in code today)
   - Files: `CLAUDE.md`
   - Verify: block present; recipe steps reference real files; existing skill-routing section untouched
-- [ ] **T20 (P1, human: ~1h / CC: ~20min)** — http — Error contract upgrade in `lib/http.ts`: `err(status, message, code?)` and `toResponse` emit `{error, code}` on every response (runtime default `internal_error` when no code passed; type stays optional for back-compat with D13); dev-mode 500 detail (`NODE_ENV === "development"` only → include `e.message` — unset NODE_ENV must NOT leak SQL fragments/paths; production stays `Unexpected server error.` byte-identical); regression tests for code passthrough + default-code fill + dev/prod/unset 500 body split
+- [x] **T20 (P1, human: ~1h / CC: ~20min)** — http — Error contract upgrade in `lib/http.ts`: `err(status, message, code?)` and `toResponse` emit `{error, code}` on every response (runtime default `internal_error` when no code passed; type stays optional for back-compat with D13); dev-mode 500 detail (`NODE_ENV === "development"` only → include `e.message` — unset NODE_ENV must NOT leak SQL fragments/paths; production stays `Unexpected server error.` byte-identical); regression tests for code passthrough + default-code fill + dev/prod/unset 500 body split
+  - Done 2026-10-02: `err(status, message, code?)` emits `{error, code}` (runtime default `internal_error`); `toResponse` passes code+current through, catch-all 500 gated on `NODE_ENV === "development"` (prod/unset/test byte-identical generic, non-Error never leaks); guards wired to `unauthenticated`/`forbidden`/`forbidden_admin_ops`; duplicate 401/403 literals in access.ts, swatch.ts, stages.ts, dispatch route → constants; `tests/http-errors.test.ts` 14 rows — 215 green
   - Surfaced by: DX D13 (machine-readable codes) + D11 (dev-mode 500 detail)
   - Files: `lib/http.ts`, `tests/http-errors.test.ts`
   - Verify: 195 existing green + new rows; prod 500 path unchanged
-- [ ] **T21 (P1, human: ~1.5h / CC: ~30min)** — errors — Extract frozen error strings to `lib/errors.ts` constants (F9 shape, 413 size, 422 batch, generic 500, 401/403 texts) **and define the full machine-readable code taxonomy there** (one exported code constant per failure, snake_case — e.g. `import_shape_invalid`, `file_too_large`, `stale_batch`, `internal_error`; required set = every code reachable from `err()`); `[13A]` tests import the constants; README error-code section (T16) lists every code; T20 tests assert every emitted code is in the exported set; Error & Rescue Registry + UI Design Contract cite constant names; closes the plan's own "reword BEFORE [13A] freezes" TODO by construction (runs before T4)
+- [x] **T21 (P1, human: ~1.5h / CC: ~30min)** — errors — Extract frozen error strings to `lib/errors.ts` constants (F9 shape, 413 size, 422 batch, generic 500, 401/403 texts) **and define the full machine-readable code taxonomy there** (one exported code constant per failure, snake_case — e.g. `import_shape_invalid`, `file_too_large`, `stale_batch`, `internal_error`; required set = every code reachable from `err()`); `[13A]` tests import the constants; README error-code section (T16) lists every code; T20 tests assert every emitted code is in the exported set; Error & Rescue Registry + UI Design Contract cite constant names; closes the plan's own "reword BEFORE [13A] freezes" TODO by construction (runs before T4)
+  - Done 2026-10-02: `lib/errors.ts` shipped (9 `MSG_*` frozen strings + 29 `CODE_*` + `ERROR_CODES` tuple + `ErrorCode` type); `lib/http.ts` 401/403/500 texts extracted to constants (byte-identical); registry + UI contract cite constant names; `reword BEFORE [13A]` TODO closed — [13A]/T4 tests import from `@/lib/errors`
   - Surfaced by: DX D17 (triple-copy drift doc/code/tests)
   - Files: `lib/errors.ts`, route handlers, `tests/rules-e.test.ts`, plan UI Design Contract wording
   - Verify: single definition per frozen string (grep shows no duplicate literals); 195 green
@@ -287,7 +301,7 @@ What changes for Fanela Central when this plan lands (vs today: 195 tests, no im
 
 ## Error & Rescue Registry
 
-Implementation-ready; Phase 3 re-verifies every row. **Fix / doc anchor column added by DX D14 — every row answers "what does the operator do next":** operator-facing anchors (413/F9/409/500 classes) resolve to README sections written by T16.
+Implementation-ready; Phase 3 re-verifies every row. **Fix / doc anchor column added by DX D14 — every row answers "what does the operator do next":** operator-facing anchors (413/F9/409/500 classes) resolve to README sections written by T16. **Message/code citations (T21):** every user-visible message and machine code below resolves to a `lib/errors.ts` constant (`MSG_*` / `CODE_*`; the authoritative set is `ERROR_CODES`) — README (T16) lists every code value.
 
 | Method / operation | What can go wrong | Failure class | Rescued? | Rescue action | User sees | Fix / doc anchor |
 |---|---|---|---|---|---|---|
@@ -378,7 +392,7 @@ Interaction contract for T4/T15 — pixel polish stays out (NOT in scope); state
 
 | FEATURE | LOADING | EMPTY | ERROR | SUCCESS | PARTIAL |
 |---|---|---|---|---|---|
-| Upload | progress bar + input disabled | dropzone: "Drop your legacy JSON export (shapes A–D). JSON only, up to 25 MB." + `accept=".json,application/json"` | inline red banner above dropzone (413 exact copy; F9 exact copy with working help target — render `phase0/05` help or reword BEFORE [13A] freezes string), input reset | filename + size chip, advance to Preview | — |
+| Upload | progress bar + input disabled | dropzone: "Drop your legacy JSON export (shapes A–D). JSON only, up to 25 MB." + `accept=".json,application/json"` | inline red banner above dropzone (413 exact copy = `MSG_FILE_TOO_LARGE`; F9 exact copy = `MSG_SHAPE_F9` — both frozen in `lib/errors.ts` [T21]; help target = `phase0/05`), input reset | filename + size chip, advance to Preview | — |
 | Preview | skeleton table + aria-live "Validating N rows…" | (n/a — empty upload precedes) | severity rows inline (existing); parser-level failure → banner on Upload | summary chips + table; reassurance footer (below) | warn/info badges listed, non-blocking |
 | Confirm | — | — | 409 → banner "This import changed in another tab — reload" + Reload button (real, per Q7.3) | executes → Result | counts restated: "Import 480, skip 20 errored?" |
 | Execute | button disabled + label "Importing…" (optimistic disable on click; CAS backstop) | — | failed → top-of-page banner + auto-expanded batch row, `errors[]` first 50 + count | Result step | non-error rows committed, errored rows zero-written (Q7.1) |
@@ -504,16 +518,16 @@ Every confusion point maps to an approved fix (README / setup script / compose n
 
 ### DX implementation checklist
 
-- [ ] T16 README (quickstart, scripts, login, reset-MFA, compose note, API table + curl, docs map)
-- [ ] T17 `.env.example` + README env table (incl. `AUTH_SECRET` vestigial note)
-- [ ] T18 `npm run setup` golden path
-- [ ] T19 CLAUDE.md Conventions block
-- [ ] T20 `err()` `code` + dev-mode 500 detail + tests
-- [ ] T21 `lib/errors.ts` constants extraction
-- [ ] D14 Error & Rescue Registry gains "Fix / doc anchor" column (this document)
-- [ ] D19 timed cold-start acceptance in global DoD (this document)
-- [ ] D21 post-ship devex-review TODO in TODOS.md
-- [ ] Existing 195 tests stay green (this review changes plan text only until T20/T21 execute)
+- [x] T16 README (quickstart, scripts, login, reset-MFA, compose note, API table + curl, docs map)
+- [x] T17 `.env.example` + README env table (incl. `AUTH_SECRET` vestigial note)
+- [x] T18 `npm run setup` golden path
+- [x] T19 CLAUDE.md Conventions block
+- [x] T20 `err()` `code` + dev-mode 500 detail + tests
+- [x] T21 `lib/errors.ts` constants extraction
+- [x] D14 Error & Rescue Registry gains "Fix / doc anchor" column (this document)
+- [x] D19 timed cold-start acceptance in global DoD (this document)
+- [x] D21 post-ship devex-review TODO in TODOS.md
+- [x] Existing 195 tests stay green (this review changes plan text only until T20/T21 execute)
 
 ## Completion Summary — Phase 1 (CEO plan review)
 
