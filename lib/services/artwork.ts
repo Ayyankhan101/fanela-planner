@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "./audit";
 
@@ -81,7 +81,12 @@ async function writeArtworkEvent(versionRowId: string, action: string, user: Ses
   );
 }
 
-export async function patchArtwork(jobId: string, input: ArtworkPatchInput, user: SessionUser): Promise<number> {
+// [7A] atomic site — revise (new version + current pointer + events + audit) in one tx.
+export function patchArtwork(jobId: string, input: ArtworkPatchInput, user: SessionUser): Promise<number> {
+  return withTransaction(() => patchArtworkTx(jobId, input, user));
+}
+
+async function patchArtworkTx(jobId: string, input: ArtworkPatchInput, user: SessionUser): Promise<number> {
   // A2: approve / revise / any artwork mutation — Admin + Operations only (artwork.approve)
   const isApprover = user.roles.includes("admin") || user.roles.includes("ops");
   if (!isApprover) throw { status: 403, message: "Artwork changes require Admin or Operations." };

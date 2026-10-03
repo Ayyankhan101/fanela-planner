@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, err, toResponse } from "@/lib/http";
+import { MSG_FORBIDDEN, CODE_FORBIDDEN } from "@/lib/errors";
 import { query } from "@/lib/db";
 import { hasPermission } from "@/lib/auth/access";
 import { audit } from "@/lib/services/audit";
@@ -21,7 +22,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const auth = await requireUser(req);
   if ("error" in auth) return auth.error;
   if (!hasPermission(auth.user, "jobs.plan_dispatch") && !hasPermission(auth.user, "dispatch.edit")) {
-    return err(403, "Not permitted.");
+    return err(403, MSG_FORBIDDEN, CODE_FORBIDDEN);
   }
   const { id } = await params;
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

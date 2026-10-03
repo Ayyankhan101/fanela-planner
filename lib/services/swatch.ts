@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { can, isAdminOrOps } from "@/lib/auth/access";
 import { audit } from "./audit";
 import { updateReadinessCache } from "./readiness";
+import { MSG_FORBIDDEN, CODE_FORBIDDEN } from "@/lib/errors";
 
 // Swatch machine (S1–S10). Terminal attempts immutable (S6); latest decides gate (S9).
 
@@ -73,7 +74,7 @@ export async function createAttempt(
   input: AttemptInput,
   user: SessionUser,
 ): Promise<{ id: string; version: number }> {
-  if (!can(user, "swatch.create")) throw { status: 403, message: "Not permitted." };
+  if (!can(user, "swatch.create")) throw { status: 403, message: MSG_FORBIDDEN, code: CODE_FORBIDDEN };
   const latest = await query<{ attempt_no: number; status: string }>(
     `SELECT attempt_no, status FROM swatch_attempts WHERE job_id = $1 ORDER BY attempt_no DESC LIMIT 1`,
     [jobId],
@@ -125,7 +126,17 @@ export type AttemptPatchInput = {
   fields?: AttemptInput;
 };
 
-export async function patchAttempt(
+// [7A] atomic site — decision write + attempt event + audit + readiness run in one tx.
+export function patchAttempt(
+  jobId: string,
+  attemptId: string,
+  input: AttemptPatchInput,
+  user: SessionUser,
+): Promise<number> {
+  return withTransaction(() => patchAttemptTx(jobId, attemptId, input, user));
+}
+
+async function patchAttemptTx(
   jobId: string,
   attemptId: string,
   input: AttemptPatchInput,

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "./audit";
 import { refreshJobStatus } from "./stages";
@@ -63,7 +63,12 @@ export type ShipmentPatchInput = {
   reason?: string; // void reason (P7)
 };
 
-export async function patchShipment(shipmentId: string, input: ShipmentPatchInput, user: SessionUser): Promise<number> {
+// [7A] atomic site — shipment transition + event + audit + job lifecycle update in one tx.
+export function patchShipment(shipmentId: string, input: ShipmentPatchInput, user: SessionUser): Promise<number> {
+  return withTransaction(() => patchShipmentTx(shipmentId, input, user));
+}
+
+async function patchShipmentTx(shipmentId: string, input: ShipmentPatchInput, user: SessionUser): Promise<number> {
   const lock = await query<{
     id: string;
     job_id: string;
