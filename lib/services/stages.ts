@@ -1,8 +1,9 @@
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/access";
 import type { DepartmentKey } from "@/lib/permissions";
 import { audit } from "./audit";
+import { CODE_FORBIDDEN } from "@/lib/errors";
 
 // Department work & stages (D1–D10). Invalid transition → 422; stale version → 409.
 
@@ -82,7 +83,18 @@ export async function refreshJobStatus(jobId: string): Promise<void> {
   }
 }
 
-export async function patchStage(
+// [7A] atomic site — stage write + audit + job rollup (refreshJobStatus) run in one tx.
+export function patchStage(
+  jobId: string,
+  stageId: string,
+  input: StagePatchInput,
+  version: number,
+  user: SessionUser,
+): Promise<number> {
+  return withTransaction(() => patchStageTx(jobId, stageId, input, version, user));
+}
+
+async function patchStageTx(
   jobId: string,
   stageId: string,
   input: StagePatchInput,
@@ -97,7 +109,7 @@ export async function patchStage(
 
   // D3: operator own department only; Admin/Ops override
   if (!can(user, "stage.update", { department: s.dept_key as DepartmentKey })) {
-    throw { status: 403, message: `Not permitted for department: ${s.dept_key}.` };
+    throw { status: 403, message: `Not permitted for department: ${s.dept_key}.`, code: CODE_FORBIDDEN };
   }
   if (Number(s.version) !== version) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM job_stages WHERE id = $1`, [stageId]);

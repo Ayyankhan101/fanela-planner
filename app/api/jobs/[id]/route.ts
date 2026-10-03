@@ -9,7 +9,7 @@ export async function GET(req: Request, { params }: Params) {
   const auth = await requirePermission("jobs.view", { req });
   if ("error" in auth) return auth.error;
   const { id } = await params;
-  const job = await getJob(id);
+  const job = await getJob(id, auth.user);
   if (!job) return err(404, "Job not found.");
   return NextResponse.json({ job });
 }

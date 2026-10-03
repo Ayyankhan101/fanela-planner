@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { query } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/access";
 import { audit } from "./audit";
 import { appendStockEvent, stockOverview } from "./stock";
 import { computeReadiness, updateReadinessCache } from "./readiness";
@@ -152,7 +153,7 @@ export async function listJobs(opts: { q?: string; includeArchived?: boolean } =
   );
 }
 
-export async function getJob(id: string): Promise<Record<string, unknown> | null> {
+export async function getJob(id: string, viewer?: SessionUser): Promise<Record<string, unknown> | null> {
   const job = await query(
     `SELECT j.*,
             to_char(j.order_date, 'YYYY-MM-DD') AS order_date,
@@ -168,7 +169,7 @@ export async function getJob(id: string): Promise<Record<string, unknown> | null
     [id],
   );
   if (!job[0]) return null;
-  const [lines, stages, positions, screen, swatchReq, attempts, shipments, readiness, stock] = await Promise.all([
+  const [rawLines, stages, positions, screen, swatchReq, attempts, shipments, readiness, stock] = await Promise.all([
     query(`SELECT * FROM job_lines WHERE job_id = $1 ORDER BY sku_text`, [id]),
     query(
       `SELECT s.*, d.key AS department_key, d.name AS department_name FROM job_stages s
@@ -183,6 +184,18 @@ export async function getJob(id: string): Promise<Record<string, unknown> | null
     computeReadiness(id), // G1: server-computed on read
     stockOverview(id), // J4: outstanding from stock events
   ]);
+  // M2/M3 server-side stripping: cost/price fields only for the matching grant
+  const canCosts = viewer ? can(viewer, "costs.view") : true;
+  const canPrices = viewer ? can(viewer, "prices.view") : true;
+  const lines = rawLines.map((l) => {
+    const line = { ...l } as Record<string, unknown>;
+    if (!canCosts) delete line.buying_cost;
+    if (!canPrices) {
+      delete line.unit_price;
+      delete line.tax;
+    }
+    return line;
+  });
   return {
     ...job[0], lines, stages, positions, screen: screen[0] ?? null,
     swatchRequirement: swatchReq[0] ?? null, attempts, shipments,

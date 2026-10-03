@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { updateReadinessCache, STOCK_ISSUES } from "./readiness";
 
@@ -167,7 +167,18 @@ export type StockPatchInput = {
 };
 
 // Warehouse edit (stock.edit scoped): flags + receipts; corrections admin/ops only (v11 canCorrectStock).
-export async function patchStockLine(
+// [7A] atomic site — receipt/correction writes (event + status cache + readiness) run in one tx.
+export function patchStockLine(
+  jobId: string,
+  lineId: string,
+  input: StockPatchInput,
+  version: number,
+  user: SessionUser,
+): Promise<number> {
+  return withTransaction(() => patchStockLineTx(jobId, lineId, input, version, user));
+}
+
+async function patchStockLineTx(
   jobId: string,
   lineId: string,
   input: StockPatchInput,
