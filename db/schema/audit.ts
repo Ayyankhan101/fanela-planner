@@ -40,6 +40,10 @@ export const importBatches = pgTable("import_batches", {
   kind: text("kind").notNull(), // v11-json | excel
   fileId: uuid("file_id").references(() => files.id),
   status: importBatchStatus("status").notNull().default("created"),
+  // [3A] CAS guard: confirm/execute update WHERE status=… AND version=$n → 0 rows = 409
+  version: integer("version").notNull().default(1),
+  // [A2] parsed rows + severities persisted at Parse — Preview/Resume/CSV read this, no re-parse
+  parsed: jsonb("parsed"),
   created: integer("created").notNull().default(0),
   skipped: integer("skipped").notNull().default(0),
   errors: jsonb("errors"),

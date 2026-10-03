@@ -78,6 +78,17 @@ export const loginAttempts = pgTable(
   (t) => [index("login_attempts_email_ts").on(t.email, t.ts), index("login_attempts_ip_ts").on(t.ip, t.ts)],
 );
 
+// upload rate-limit log (T13) — append-only, login_attempts precedent
+export const uploadAttempts = pgTable(
+  "upload_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    ts: timestamp("ts", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("upload_attempts_user_ts").on(t.userId, t.ts)],
+);
+
 // pending_mfa staging tokens (spec §10 two-step Auth.js flow) — never grant app access
 export const pendingMfa = pgTable("pending_mfa", {
   id: uuid("id").primaryKey().defaultRandom(),

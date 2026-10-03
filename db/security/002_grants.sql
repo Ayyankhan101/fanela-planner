@@ -8,6 +8,7 @@ GRANT INSERT, SELECT ON swatch_attempt_events TO fanela_app;
 GRANT INSERT, SELECT ON artwork_events TO fanela_app;
 GRANT INSERT, SELECT ON shipment_events TO fanela_app;
 GRANT INSERT, SELECT ON login_attempts TO fanela_app;
+GRANT INSERT, SELECT ON upload_attempts TO fanela_app;
 
 -- Everything else: full DML (RLS narrows UPDATE where needed)
 GRANT SELECT, INSERT, UPDATE, DELETE ON
@@ -24,6 +25,6 @@ TO fanela_app;
 
 -- Belt + braces: revoke dangerous privileges even if a future grant adds them
 REVOKE UPDATE, DELETE, TRUNCATE ON stock_events, operational_audit,
-  swatch_attempt_events, artwork_events, shipment_events, login_attempts FROM fanela_app;
+  swatch_attempt_events, artwork_events, shipment_events, login_attempts, upload_attempts FROM fanela_app;
 -- Swatch attempts are never deleted (spec §9: attempts immutable once approved)
 REVOKE DELETE, TRUNCATE ON swatch_attempts FROM fanela_app;
