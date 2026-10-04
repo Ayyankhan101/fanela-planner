@@ -119,12 +119,20 @@ describe("T13 pre-P4 — cookie flags + session fixation/rotation", () => {
     expect(base.sameSite).toBe("lax");
     expect(base.path).toBe("/");
     expect(base.secure).toBe(false); // vitest NODE_ENV=test
+    // lib/db loads dotenv/config → .env may carry AUTH_COOKIE_SECURE=false
+    // (plain-HTTP LAN deploy); production-default assertion needs it unset.
     const prev = process.env.NODE_ENV;
+    const prevSecureFlag = process.env.AUTH_COOKIE_SECURE;
     Reflect.set(process.env, "NODE_ENV", "production");
+    delete process.env.AUTH_COOKIE_SECURE;
     try {
       expect(sessionCookieOptions(expiresAt).secure).toBe(true);
+      process.env.AUTH_COOKIE_SECURE = "false";
+      expect(sessionCookieOptions(expiresAt).secure).toBe(false); // LAN opt-out honored
     } finally {
       Reflect.set(process.env, "NODE_ENV", prev);
+      if (prevSecureFlag === undefined) delete process.env.AUTH_COOKIE_SECURE;
+      else process.env.AUTH_COOKIE_SECURE = prevSecureFlag;
     }
   });
 
