@@ -22,6 +22,7 @@ export function Nav({
   const links = [
     { href: "/jobs", label: "Jobs" },
     ...(permissions.includes("customers.view") ? [{ href: "/customers", label: "Customers" }] : []),
+    ...(permissions.includes("audit.view") ? [{ href: "/audit", label: "Audit" }] : []),
     // E6: same class as the /admin/import route gate (admin/ops)
     ...(user.roles.includes("admin") || user.roles.includes("ops")
       ? [{ href: "/admin/import", label: "Import" }]
