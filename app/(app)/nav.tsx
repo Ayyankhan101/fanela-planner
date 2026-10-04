@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Bell } from "./bell";
 
 export function Nav({
   user,
   permissions,
+  unreadCount,
+  showBell,
 }: {
   user: { name: string; roles: string[] };
   permissions: string[];
+  unreadCount: number;
+  showBell: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -20,6 +25,7 @@ export function Nav({
   }
 
   const links = [
+    { href: "/dashboard", label: "Dashboard" },
     { href: "/jobs", label: "Jobs" },
     ...(permissions.includes("customers.view") ? [{ href: "/customers", label: "Customers" }] : []),
     ...(permissions.includes("audit.view") ? [{ href: "/audit", label: "Audit" }] : []),
@@ -32,7 +38,7 @@ export function Nav({
   return (
     <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
-        <Link href="/jobs" className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <Link href="/dashboard" className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           Fanela
         </Link>
         <nav className="flex gap-4">
@@ -47,6 +53,7 @@ export function Nav({
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm text-zinc-500">
+          <Bell initialCount={unreadCount} enabled={showBell} />
           <span>
             {user.name} <span className="text-zinc-400">({user.roles.join(", ")})</span>
           </span>

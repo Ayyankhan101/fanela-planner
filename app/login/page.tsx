@@ -46,13 +46,13 @@ export default function LoginPage() {
           return;
         }
         if (data.mfa) return setStage("mfa");
-        return goJobs();
+        return goDashboard();
       }
       if (stage === "mfa") {
         const body = useRecovery ? { recovery } : { token };
         const { ok, data } = await post("/api/auth/mfa", body);
         if (!ok) return setError((data.error as string) ?? "Verification failed.");
-        return goJobs();
+        return goDashboard();
       }
       if (stage === "setup") {
         const { ok, data } = await post("/api/auth/mfa/enroll", { secret, token });
@@ -66,14 +66,14 @@ export default function LoginPage() {
     }
   }
 
-  function goJobs() {
-    router.replace("/jobs");
+  function goDashboard() {
+    router.replace("/dashboard");
     router.refresh();
   }
 
   const copy =
     stage === "password"
-      ? "Sign in to your department queue."
+      ? "Sign in to the production dashboard."
       : stage === "mfa"
         ? "Enter the 6-digit authenticator code."
         : "Set up multi-factor authentication (required for your role)."
@@ -193,7 +193,7 @@ export default function LoginPage() {
         {stage === "recovery_codes" ? (
           <button
             type="button"
-            onClick={goJobs}
+            onClick={goDashboard}
             className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
           >
             I saved them — continue
