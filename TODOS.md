@@ -105,6 +105,8 @@ Open items discovered during development. Checked = done.
 
 **Closure record:** Triggers written before P3 close (requirement) ✓; P4-close checkpoint reviewed same day — no MIS evaluated → no kill ✓. Next review = pre-P5 (carried in plan).
 
+**Pre-P5 review (2026-10-04): NO KILL — P5 unblocked.** Full screen in `docs/research/c9-build-vs-buy-2026-10-04.md`: 10 candidates priced (PrintDesk £39.99/mo, Pro-cess £30/mo, Odoo £18/user/mo, PrintSmith Vision $599/yr pass price; PrintVis/Ordant/Infigo/Twist/Panacea fail; Tharstern unverifiable), coverage mapped for price-passers — best generous = Odoo ~45% vs 80% needed; structural ceiling ~77% (swatch S + readiness G absent everywhere). Revisit triggers recorded in report.
+
 ### Post-ship devex-review (DX verification) — CLOSED 2026-10-03
 
 **Exit criteria:** TTHW number recorded (env noted) vs 2–5 min target + checklist of D5–D20 fixes verified present.
