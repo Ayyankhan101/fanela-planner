@@ -93,6 +93,7 @@ Upload ──► Parse ──► Validate ──► Preview ──► Confirm �
 
 ### P5 — Later (gated)
 - DPD API (prereq D1–D6), Xero (X1–X5) via outbox — **reinstall pg-boss here**; notifications/dashboards after schema stable. Cutover plan (target date, parallel-run exit criteria, legacy-shutdown owner) required before go-live — tracked in `TODOS.md`.
+- **✅ P5 groundwork landed 2026-10-04** (`p5/outbox-groundwork`): pg-boss reinstalled (v12.36) + `outbox-tick` every 15 s (`scripts/outbox-worker.mts` / `npm run outbox:worker`, runbook §4c), migration `0005` (`next_retry_at`, `claimed_at`), `lib/services/outbox.ts` (ambient-tx enqueue, CAS claim + `FOR UPDATE SKIP LOCKED`, 30 s ×2 backoff → 5 attempts → `failed`, 5 min stuck reclaim, manual retry), `POST /api/admin/outbox/[id]/retry`, 10 tests in `tests/outbox.test.ts`. **Not landed (arrive with D1–D6/X1–X5): DPD/Xero sender impls, domain-event emission, event freeze — sender registry is empty, so outbox rows wait unclaimed at `attempts = 0` (by design).**
 
 ## 3. Test mapping [10A fixed]
 

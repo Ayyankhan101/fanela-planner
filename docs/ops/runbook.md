@@ -119,6 +119,36 @@ Quota: uploads are capped (`STORAGE_QUOTA_BYTES`, default 5 GB) — over-cap
 uploads get HTTP 413 `import_storage_quota`, so the sweep also keeps the box
 out of ENOSPC. Include `storage/uploads/` in the nightly off-box copy (§8).
 
+## 4c. Outbox worker (15 s tick — DPD/Xero groundwork)
+
+The outbox (`integration_outbox`) is the transactional queue for outbound
+DPD/Xero calls (spec §4.9 / phase0 §4.9). The **table owns all retry state**
+(backoff 30 s ×2, 5 attempts → `failed`, stuck `sending` reclaim after 5 min);
+pg-boss only fires the tick — no delayed pg-boss retries, so the two schedulers
+cannot race.
+
+```bash
+npm run outbox:worker    # needs DATABASE_URL; supervise with Restart=always / KeepAlive
+```
+
+One instance is fine (claims use `FOR UPDATE SKIP LOCKED`, so extra instances
+are safe, not faster than 25 rows/tick). pg-boss creates its own `boss` schema
+under `DATABASE_URL` — no `fanela_app` grants needed. The `outbox-tick`
+schedule (every 15 s) is created idempotently at worker start.
+
+Monitor weekly / on alert:
+
+```sql
+-- failed or stuck rows — should be empty once adapters are live
+SELECT id, kind, status, attempts, last_error, ts
+FROM integration_outbox
+WHERE status IN ('failed', 'sending')
+ORDER BY ts DESC LIMIT 20;
+```
+
+Manual retry: `POST /api/admin/outbox/{id}/retry` (admin/ops, empty JSON
+body) — requeues `failed` / stuck rows immediately; `sent` rows 409.
+
 ## 5. Log capture
 
 - App logs to stdout — the supervisor owns rotation
