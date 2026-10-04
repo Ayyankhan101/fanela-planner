@@ -64,55 +64,24 @@ Open items discovered during development. Checked = done.
 - **Shutdown owner:** client (stop legacy entry, read-only archive export kept ≥90 days per B2).
 - **Rollback:** legacy stays read-only-able until 5 working days post-shutdown; any failed daily reconciliation for 2 consecutive days reopens dual entry.
 
-### Prod-ops runbook before go-live
-
-**What:** Minimal runbook: daily DB backup + restore drill, log capture, uptime monitoring — plus verify B1/B2 (backup/restore) and L4 (nightly check) ops rules from the register.
-
-**Why:** Native CEO R11 + outside finding 6 — B1/B2/L4 are register rules orphaned from every phase (no test can prove them); system replaces the legacy planner with zero ops story.
-
-**Context:** `05 §5` procedure even says "see git history" — no git exists yet (CEO C1 gate). Runbook entry also covers the first-CI-red-is-blocker rule (native R10) and MinIO/S3 migration checkpoint when multi-instance hosting appears (E5 storage is local-disk for MVP).
-
-**Effort:** S (human) / S (CC)
-**Priority:** P2
-**Depends on:** CEO C1 (git), P4 close
-
-### Design system (DESIGN.md) before production UX pass
-
-**What:** Run a `/design-consultation` session to produce a project DESIGN.md (typography scale, spacing, color roles, component patterns) consolidating the Phase-2 UI Design Contract plus as-built patterns.
-
-**Why:** Plan-design-review Q8.1 — no DESIGN.md exists; the UI Design Contract is plan-scoped and import/export-specific. Without a design source of truth, later features (dashboards, notifications) reintroduce drift.
-
-**Context:** As-built vocabulary already captured in the contract (Tailwind + zinc, `prefers-color-scheme`, nav permission pattern, `space-y-6` shells, bordered table cards). Session should reconcile contract decisions (severity tokens, Geist/DM Sans typography) into project-wide tokens.
-
-**Effort:** S (human) / S (CC)
-**Priority:** P3
-**Depends on:** None
-
-### Backfill import-wizard mockups (designer key 401)
-
-**What:** When a valid OpenAI key is configured for `gstack design`, generate mockups into `designs/import-wizard-20261001/` for the 6 wizard states per UI Design Contract; verify against the text contract.
-
-**Why:** Phase-2 design review ran text-only — designer binary blocked (`401 invalid_api_key: sk-ceb3d…1579`). Visual spec not yet produced; text contract gates T4 but pixels are unspecified.
-
-**Context:** Directory scaffolded empty. Designer binary at `~/.claude/skills/gstack/design/dist/design` reports `DESIGN_READY`. Same invalid key seen in `~/.codex/auth.json` — fix the key, then run mockup generation.
-
-**Effort:** S (human, key) / S (CC)
-**Priority:** P3
-**Depends on:** Valid OpenAI API key
-
-### Storage retention/quota + orphan upload sweep
-
-**What:** Storage policy for `storage/uploads/` originals: retention window (auto-delete confirmed imports after N days), quota cap (disk usage ceiling → import blocked with frozen message), and periodic orphan sweep (files with no live `files` row / `files` rows pointing at missing files — alert + cleanup).
-
-**Why:** E5 keeps originals forever with no cap; write-through at Upload can orphan files when the tx fails (file written, row never committed); quota-less storage turns every import into unbounded disk growth.
-
-**Context:** Surfaced plan-eng-review round 2 (autoplan Phase 3, findings A1/H1/S5) 2026-10-01. MVP ships local-disk `files.bucket='local'`; MinIO/S3 migration checkpoint already tracked under Dev-DB/runbook.
-
-**Effort:** M (human) / S (CC)
-**Priority:** P3
-**Depends on:** T4 (import execute), E5
-
 ## Completed
+
+### Prod-ops runbook before go-live — CLOSED 2026-10-04
+
+**Closure record:** `docs/ops/runbook.md` shipped (PR #2): B1 nightly pg_dump + quarterly restore drill with drill log, B2 90-day artefact rule, L4 nightly grant/correction-integrity SQL, storage-sweep cron, log capture, uptime probe, first-CI-red rule, MinIO/S3 checkpoint, reconciliation queries. Operational follow-ups (fill box owner, first drill after first nightly dump) tracked inside the runbook itself.
+
+### Design system (DESIGN.md) before production UX pass — CLOSED 2026-10-04
+
+**Closure record:** `DESIGN.md` at repo root (PR #2), derived from shipped code rather than a designer session: Tailwind v4 + Geist, zinc-first palette with status semantics (red/amber/blue, no green), `rounded-md`/`rounded-lg` scale, max-w-6xl shell, interaction rules (typed confirm gate, banner errors, counts-on-result), a11y conventions, references to real screenshots in `designs/`. Free path chosen — designer key still 401; text source of truth gates future UX anyway.
+
+### Backfill import-wizard mockups (designer key 401) — CLOSED 2026-10-04
+
+**Closure record:** Free path: five verified real-UI captures in `designs/import-wizard-20261001/` (upload-empty, preview-all-rows, confirm-gate, import-complete, upload-error), each checked against its pre-shot a11y snapshot (PR #2, `623d76e`). Designer binary skipped — key still `401 invalid_api_key`; real pixels supersede generated mockups. Wizard bugs found while capturing fixed in `ecfffc8` + `bf6d514`.
+
+### Storage retention/quota + orphan upload sweep — CLOSED 2026-10-04
+
+**Closure record:** Quota cap `STORAGE_QUOTA_BYTES` (default 5 GB) → HTTP 413 `import_storage_quota` before any write; retention `UPLOAD_RETENTION_DAYS` (default 90, B2 floor) + 24 h orphan grace via `npm run storage:sweep` (`scripts/storage-sweep.mts`, runbook §4b). `files` row and batch history survive disk deletion; `readOriginal` already 404s missing files. Tests `tests/storage-policy.test.ts` (6). First live run freed 213 MB of unreferenced test uploads. PR #2 (`a682c38`).
+
 
 ### Dev-DB drift: pick one Postgres source of truth — CLOSED 2026-10-03
 
