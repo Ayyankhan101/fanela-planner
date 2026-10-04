@@ -20,6 +20,9 @@ export const MSG_CSRF_ORIGIN_MISMATCH = "Cross-origin request blocked.";
 export const MSG_EXPORT_UNKNOWN_VIEW = "Unknown export view.";
 export const MSG_EXPORT_ROW_CAP =
   "Export row cap reached (100,000 rows). Narrow the view with filters and try again.";
+export const MSG_OUTBOX_NOT_FOUND = "Outbox row not found.";
+export const MSG_OUTBOX_RETRY_SENT = "This row already sent. Nothing to retry.";
+export const MSG_OUTBOX_RETRY_SENDING = "This row is sending right now. Wait for the attempt to finish, then retry.";
 
 export const CODE_INTERNAL_ERROR = "internal_error";
 export const CODE_UNAUTHENTICATED = "unauthenticated";
@@ -53,6 +56,9 @@ export const CODE_IMPORT_BATCH_STATE = "import_batch_invalid_state";
 export const CODE_IMPORT_STORAGE_FAILED = "import_storage_failed";
 export const CODE_EXPORT_VIEW_UNKNOWN = "export_view_unknown";
 export const CODE_EXPORT_ROW_CAP = "export_row_cap";
+export const CODE_OUTBOX_NOT_FOUND = "outbox_not_found";
+export const CODE_OUTBOX_RETRY_SENT = "outbox_retry_sent";
+export const CODE_OUTBOX_RETRY_SENDING = "outbox_retry_sending";
 
 export const ERROR_CODES = [
   CODE_INTERNAL_ERROR,
@@ -86,6 +92,9 @@ export const ERROR_CODES = [
   CODE_IMPORT_STORAGE_FAILED,
   CODE_EXPORT_VIEW_UNKNOWN,
   CODE_EXPORT_ROW_CAP,
+  CODE_OUTBOX_NOT_FOUND,
+  CODE_OUTBOX_RETRY_SENT,
+  CODE_OUTBOX_RETRY_SENDING,
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
