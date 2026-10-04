@@ -20,6 +20,7 @@ import {
   type ErrorCode,
 } from "@/lib/errors";
 import { updateReadinessCache } from "./readiness";
+import { emitNotification } from "./notifications";
 import { DEPARTMENTS } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/auth/session";
 
@@ -890,6 +891,18 @@ export async function executeBatch(
        WHERE id = $1 AND status = 'confirmed'`,
       [id, JSON.stringify([{ message }])],
     );
+    // side channel — the failed batch row above is the durable record; never mask `e`
+    try {
+      await emitNotification({
+        kind: "import_failed",
+        title: "Import batch failed",
+        body: `Batch ${id}: ${message}`,
+        roles: ["admin", "ops"],
+        actorId: user.id,
+      });
+    } catch {
+      // best-effort delivery
+    }
     throw e;
   }
 }

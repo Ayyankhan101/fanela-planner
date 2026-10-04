@@ -43,6 +43,13 @@
       "when": 1791094340688,
       "tag": "0005_whole_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791100888674,
+      "tag": "0006_curved_kabuki",
+      "breakpoints": true
     }
   ]
 }
