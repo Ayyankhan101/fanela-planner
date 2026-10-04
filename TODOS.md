@@ -56,6 +56,14 @@ Open items discovered during development. Checked = done.
 **Priority:** P1
 **Depends on:** Success metric definition, operator demo
 
+**Draft (2026-10-03, CC) — awaiting owner confirm (date + shutdown owner are human-only):**
+- **Gate-in:** C3 dry-run passes (full legacy export imports clean, spot-reconcile Δ=0) + C5 operator demo accepted + prod runbook (`docs/ops/runbook.md`) live + monitoring proven on prod for ≥5 working days.
+- **Parallel-run:** 14 working days dual entry (legacy + Fanela), daily reconciliation = job count Δ=0 and no Fanela-only write failures; any Δ>0 resets the counter.
+- **Metrics at cutover:** take C7 baselines — (1) median minutes/job (legacy vs Fanela), (2) % live jobs tracked in Fanela (target 100% at shutdown).
+- **Proposed cutover date rule:** gate-in date + 14 working days + 2 (reconciliation buffer) — fill concrete date once gate-in date is known.
+- **Shutdown owner:** client (stop legacy entry, read-only archive export kept ≥90 days per B2).
+- **Rollback:** legacy stays read-only-able until 5 working days post-shutdown; any failed daily reconciliation for 2 consecutive days reopens dual entry.
+
 ### Prod-ops runbook before go-live
 
 **What:** Minimal runbook: daily DB backup + restore drill, log capture, uptime monitoring — plus verify B1/B2 (backup/restore) and L4 (nightly check) ops rules from the register.
