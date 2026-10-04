@@ -9,6 +9,8 @@ export const MSG_FILE_TOO_LARGE =
   "File exceeds the 25 MB limit. Export a smaller file or split the backup and import each part separately.";
 export const MSG_ROW_CAP =
   "This file contains more than 50,000 rows. Split it into smaller batches of 50,000 rows or fewer and import them one at a time.";
+export const MSG_STORAGE_QUOTA =
+  "Storage quota reached. Clear old import files or wait for the nightly sweep, then try again.";
 export const MSG_TYPED_COUNT =
   "Confirm count does not match the preview. Reload, re-check the counts shown, and try again.";
 export const MSG_BATCH_STATE =
@@ -45,6 +47,7 @@ export const CODE_STALE_BATCH = "stale_batch";
 export const CODE_IMPORT_SHAPE_INVALID = "import_shape_invalid";
 export const CODE_IMPORT_FILE_TOO_LARGE = "import_file_too_large";
 export const CODE_IMPORT_ROW_CAP = "import_row_cap";
+export const CODE_IMPORT_STORAGE_QUOTA = "import_storage_quota";
 export const CODE_IMPORT_TYPED_COUNT = "import_typed_count_mismatch";
 export const CODE_IMPORT_BATCH_STATE = "import_batch_invalid_state";
 export const CODE_IMPORT_STORAGE_FAILED = "import_storage_failed";
@@ -77,6 +80,7 @@ export const ERROR_CODES = [
   CODE_IMPORT_SHAPE_INVALID,
   CODE_IMPORT_FILE_TOO_LARGE,
   CODE_IMPORT_ROW_CAP,
+  CODE_IMPORT_STORAGE_QUOTA,
   CODE_IMPORT_TYPED_COUNT,
   CODE_IMPORT_BATCH_STATE,
   CODE_IMPORT_STORAGE_FAILED,
