@@ -4,7 +4,7 @@ import { z } from "zod";
 import { query } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { loginBlocked, recordLogin } from "@/lib/auth/rate-limit";
-import { createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
+import { cookieSecure, createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
 import { clientIp, err } from "@/lib/http";
 import { MFA_COOKIE, MFA_TTL_MS, MFA_MANDATORY_ROLES } from "@/lib/auth/mfa";
 import { MSG_INVALID_REQUEST, CODE_INVALID_REQUEST } from "@/lib/errors";
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     res.cookies.set(MFA_COOKIE, id, {
       httpOnly: true,
       sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
+      secure: cookieSecure(),
       path: "/",
       maxAge: MFA_TTL_MS / 1000,
     });
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     res.cookies.set(MFA_COOKIE, id, {
       httpOnly: true,
       sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
+      secure: cookieSecure(),
       path: "/",
       maxAge: MFA_TTL_MS / 1000,
     });

@@ -41,11 +41,18 @@ export async function createSession(
   return { id: rows[0].id, expiresAt };
 }
 
+// Secure flag: production default, but AUTH_COOKIE_SECURE=false opts out for
+// plain-HTTP LAN deployments (browsers reject Secure cookies set over http://
+// on non-localhost origins — login would bounce forever).
+export function cookieSecure(): boolean {
+  return process.env.NODE_ENV === "production" && process.env.AUTH_COOKIE_SECURE !== "false";
+}
+
 export function sessionCookieOptions(expiresAt: Date) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     expires: expiresAt,
   };
