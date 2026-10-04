@@ -57,7 +57,7 @@ Notifications/email, dashboards beyond spec §11, PrintVis/Odoo (buy alternative
 
 - [ ] D1–D6 collected
 - [ ] X1–X5 collected
-- [ ] `integration_outbox` table + `kind` enum shipped in MVP schema (rows unused until Phase 4)
+- [x] `integration_outbox` table + `kind` enum shipped in MVP schema (rows unused until Phase 4) — worker groundwork shipped 2026-10-04: migration `0005` backoff/claim columns, `enqueueOutbox`/`dispatchOutboxOnce`/`retryOutbox`, `npm run outbox:worker` (15 s pg-boss tick), admin retry endpoint, runbook §4c; **senders still empty → DPD/Xero emission lands with D1–D6/X1–X5 below**
 - [ ] Domain events list frozen + versioned (`job-header`, `order-lines`, `stage`, `dispatch`, `stock.*`)
 - [ ] Secrets manager choice + rotation documented (spec §18)
 - [ ] Load test: 30 calls/min throttle + queue drain verified against DPD stage env
