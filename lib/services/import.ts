@@ -1,16 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { query, withTransaction } from "@/lib/db";
 import {
   MSG_SHAPE_F9,
   MSG_FILE_TOO_LARGE,
   MSG_ROW_CAP,
+  MSG_STORAGE_QUOTA,
   MSG_TYPED_COUNT,
   MSG_BATCH_STATE,
   CODE_IMPORT_SHAPE_INVALID,
   CODE_IMPORT_FILE_TOO_LARGE,
   CODE_IMPORT_ROW_CAP,
+  CODE_IMPORT_STORAGE_QUOTA,
   CODE_IMPORT_TYPED_COUNT,
   CODE_IMPORT_BATCH_STATE,
   CODE_STALE_BATCH,
@@ -23,7 +25,61 @@ import type { SessionUser } from "@/lib/auth/session";
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // spec decision — fixed by design
 export const ROW_CAP = 50_000;
+export const DEFAULT_STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // E5: local-disk cap, 5 GB
+export const DEFAULT_UPLOAD_RETENTION_DAYS = 90; // B2: originals kept ≥90 days after go-live
+export const SWEEP_GRACE_HOURS = 24; // disk-written-but-not-committed orphans get a day to exist
 const UPLOAD_DIR = path.join(process.cwd(), "storage", "uploads");
+
+export function storageQuotaBytes(): number {
+  const raw = Number(process.env.STORAGE_QUOTA_BYTES);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_STORAGE_QUOTA_BYTES;
+}
+
+export function uploadRetentionDays(): number {
+  const raw = Number(process.env.UPLOAD_RETENTION_DAYS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_UPLOAD_RETENTION_DAYS;
+}
+
+export async function storageUsageBytes(dir = UPLOAD_DIR): Promise<number> {
+  const names = await readdir(dir).catch(() => [] as string[]);
+  let total = 0;
+  for (const name of names) {
+    const st = await stat(path.join(dir, name)).catch(() => null);
+    if (st?.isFile()) total += st.size;
+  }
+  return total;
+}
+
+export type SweepResult = { removedOrphans: number; removedExpired: number; bytesFreed: number };
+
+// Orphans (disk write precedes the tx commit — E5): no files row, older than grace → delete.
+// Expired: files row present, older than retention (B2) → disk file only; batch history keeps name/counts.
+export async function sweepUploads(
+  opts: { retentionDays?: number; graceHours?: number; dir?: string } = {},
+): Promise<SweepResult> {
+  const dir = opts.dir ?? UPLOAD_DIR;
+  const retentionMs = (opts.retentionDays ?? uploadRetentionDays()) * 86_400_000;
+  const graceMs = (opts.graceHours ?? SWEEP_GRACE_HOURS) * 3_600_000;
+  const rows = await query<{ key: string }>(`SELECT key FROM files`);
+  const keyed = new Set(rows.map((r) => r.key));
+  const names = await readdir(dir).catch(() => [] as string[]);
+  const now = Date.now();
+  const res: SweepResult = { removedOrphans: 0, removedExpired: 0, bytesFreed: 0 };
+  for (const name of names) {
+    if (!name.endsWith(".json")) continue;
+    const p = path.join(dir, name);
+    const st = await stat(p).catch(() => null);
+    if (!st?.isFile()) continue;
+    const age = now - st.mtimeMs;
+    const hasRow = keyed.has(name);
+    if (hasRow ? age <= retentionMs : age <= graceMs) continue;
+    await unlink(p);
+    res.bytesFreed += st.size;
+    if (hasRow) res.removedExpired++;
+    else res.removedOrphans++;
+  }
+  return res;
+}
 const STATE_KEYS = [
   "fanela_internal_production_planner_ops_v11",
   "fanela_internal_production_planner_stock_v9",
@@ -626,8 +682,12 @@ async function batchOr404(id: string): Promise<BatchRecord> {
 }
 
 export async function uploadImport(text: string, fileName: string, user: SessionUser): Promise<UploadResult> {
-  if (Buffer.byteLength(text, "utf8") > MAX_UPLOAD_BYTES) {
+  const bytes = Buffer.byteLength(text, "utf8");
+  if (bytes > MAX_UPLOAD_BYTES) {
     fail(413, MSG_FILE_TOO_LARGE, CODE_IMPORT_FILE_TOO_LARGE);
+  }
+  if ((await storageUsageBytes()) + bytes > storageQuotaBytes()) {
+    fail(413, MSG_STORAGE_QUOTA, CODE_IMPORT_STORAGE_QUOTA);
   }
   const batchId = await persistOriginal(text, fileName, user.id);
   try {
