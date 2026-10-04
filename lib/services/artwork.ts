@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "./audit";
+import { emitNotification } from "./notifications";
 
 // Artwork approval machine (A1–A5): Draft → Awaiting Approval → Approved | Rejected;
 // revise Approved/Rejected → NEW version at Draft (A3), rejected record never rewritten.
@@ -168,5 +169,15 @@ async function patchArtworkTx(jobId: string, input: ArtworkPatchInput, user: Ses
   const after = await loadArtwork(jobId);
   await writeArtworkEvent(st.version_row_id, input.action, user, input.reason ?? null, before, after);
   await audit({ entityType: "artwork", entityId: st.version_row_id, jobId, action: "artwork", user, before, after });
+  if (input.action === "submit") {
+    await emitNotification({
+      kind: "artwork_awaiting",
+      title: "Artwork awaiting approval",
+      body: `Version ${Number(after?.version ?? st.version)} proof submitted for approval.`,
+      jobId,
+      roles: ["admin", "ops"],
+      actorId: user.id,
+    });
+  }
   return Number(after?.version ?? st.version);
 }

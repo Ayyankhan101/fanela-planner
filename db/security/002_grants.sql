@@ -20,7 +20,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   artworks, artwork_versions, artwork_assets,
   swatch_requirements, swatch_attempts, swatch_assets,
   shipments, shipment_attachments, files,
-  import_batches, integration_outbox
+  import_batches, integration_outbox,
+  notifications
 TO fanela_app;
 
 -- Belt + braces: revoke dangerous privileges even if a future grant adds them

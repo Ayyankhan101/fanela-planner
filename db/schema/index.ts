@@ -14,6 +14,7 @@ export * from "./stock";
 export * from "./work";
 export * from "./dispatch";
 export * from "./audit";
+export * from "./notifications";
 
 export const usersRelations = relations(identity.users, ({ many }) => ({
   roles: many(identity.userRoles),

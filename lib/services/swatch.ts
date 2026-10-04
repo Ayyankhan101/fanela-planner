@@ -3,6 +3,7 @@ import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { can, isAdminOrOps } from "@/lib/auth/access";
 import { audit } from "./audit";
+import { emitNotification } from "./notifications";
 import { updateReadinessCache } from "./readiness";
 import { MSG_FORBIDDEN, CODE_FORBIDDEN } from "@/lib/errors";
 
@@ -217,6 +218,16 @@ async function patchAttemptTx(
 
   if (target !== a.status) await swatchEvent(attemptId, target, user, input.reason ?? null);
   await audit({ entityType: "swatch", entityId: attemptId, jobId, action: "swatch", user, before: before[0], after: after[0] });
+  if (target !== a.status && target === "awaiting") {
+    await emitNotification({
+      kind: "swatch_awaiting",
+      title: "Swatch awaiting approval",
+      body: `Attempt #${a.attempt_no} submitted for approval.`,
+      jobId,
+      roles: ["admin", "ops"],
+      actorId: user.id,
+    });
+  }
   await updateReadinessCache(jobId); // G7: decision changes colour
   return Number(res[0].version);
 }
