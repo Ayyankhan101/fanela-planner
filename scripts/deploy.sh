@@ -12,6 +12,10 @@ npm ci --no-audit --no-fund
 echo "==> building"
 npm run build
 
+echo "==> migrating schema + security grants (idempotent; runbook §deploy)"
+npm run db:migrate
+npm run db:security
+
 echo "==> restarting app service"
 launchctl kickstart -k "gui/$(id -u)/com.fanela.app"
 

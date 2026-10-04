@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1] - 2026-10-04
+
+### Added
+- Dashboard landing (`/dashboard`, root `/` redirects): readiness mix (white/amber/green/unknown), stage matrix by department, approval queue counts (swatch awaiting / artwork awaiting / stock issues), due + overdue dispatch list, recent audit activity (gated `audit.view`), active jobs only — `lib/services/dashboard.ts`
+- In-app notifications: `notifications` table (`0006_curved_kabuki.sql`, grants in `002_grants.sql`), `emitNotification` role fan-out with actor exclusion, `GET /api/notifications` + `POST /api/notifications/read` (idempotent, owner-scoped), nav bell with unread badge + dropdown (admin/ops only, 60s poll + focus refresh)
+- Emit triggers: swatch → `awaiting`, artwork `submit` → `awaiting`, import execute-fail — all inside `withTransaction` (rollback ⇒ no phantom rows)
+- Tests: `tests/notifications.test.ts` + `tests/dashboard.test.ts` (10 tests; suite 407/407)
+
+### Changed
+- `scripts/deploy.sh` now runs `db:migrate` + `db:security` before restart (runbook deploy gap)
+- `tests/security-p3.test.ts` T13 honors `AUTH_COOKIE_SECURE` LAN opt-out (production default asserted with flag unset)
+
 ## [0.2.0] - 2026-10-03
 
 ### Added

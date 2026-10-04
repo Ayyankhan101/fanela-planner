@@ -68,6 +68,7 @@ All responses use the envelope: **`{ "error": "<human message>", "code": "<machi
 | Import (admin/ops) | `POST/GET /api/admin/import` (upload raw JSON body + `x-file-name`, history), `GET /api/admin/import/:id` (`?view=preview|original|errors`), `POST /api/admin/import/:id` (`action: confirm \| execute \| discard \| revalidate`, CAS `version`) |
 | Export (admin/ops/office) | `GET /api/exports/:view` — 9 views, `?q=` for `filtered-jobs`, `.xlsx` attachment |
 | Audit | `GET /api/audit` |
+| Notifications (in-app) | `GET /api/notifications` (`?unread=true`, `?limit=`), `POST /api/notifications/read` (`{id}` one / `{}` all, idempotent) — bell UI, admin/ops only |
 
 Permissions are enforced server-side (`requirePermission` / `requireAdminOrOps`) — see `docs/phase0/04-permission-matrix.md`.
 
