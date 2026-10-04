@@ -63,6 +63,10 @@ export const integrationOutbox = pgTable(
     status: outboxStatus("status").notNull().default("pending"),
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),
+    // backoff gate: claim only pending rows with next_retry_at <= now
+    nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
+    // set on pending→sending claim; stuck claims (crash) reclaimed after 5 min
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
     ts: timestamp("ts", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("outbox_status_ts").on(t.status, t.ts)],

@@ -15,6 +15,7 @@
     "db:security": "./db/migrate-all.sh",
     "db:seed": "tsx db/seed.mts",
     "storage:sweep": "tsx scripts/storage-sweep.mts",
+    "outbox:worker": "tsx scripts/outbox-worker.mts",
     "setup": "npm run db:migrate && npm run db:security && npm run db:seed && npm run lint && npm run typecheck && npm test",
     "typegen": "next typegen"
   },
@@ -25,6 +26,7 @@
     "next": "16.3.7",
     "otpauth": "^9.5.2",
     "pg": "^8.23.0",
+    "pg-boss": "^12.36.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "^4.6.5"
