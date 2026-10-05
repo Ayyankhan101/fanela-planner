@@ -40,7 +40,7 @@ Status: **both deferred to Phase 4**, justified by research (modular-monolith 20
 | # | Prerequisite | Owner | Blocking? |
 |---|---|---|---|
 | X1 | Business mapping decisions: what a Fanela job/invoice line becomes in Xero (tracking categories, account codes, tax treatment) | client accountant | ☐ |
-| X2 | Stable domain events: `job-header`, `order-lines` audit + stock_events must be frozen schema ≥ 1 release | eng | ☐ |
+| X2 | Stable domain events: `job-header`, `order-lines` audit + stock_events must be frozen schema ≥ 1 release | eng | ☑ frozen 2026-10-05 (09-domain-events.md) |
 | X3 | Xero org + OAuth app + token storage | eng | ☐ |
 | X4 | Direction decided: **export to Xero** (jobs→invoices/bills) vs pull (purchase orders in) vs both | client | ☐ |
 | X5 | Money rounding/currency: GBP fixed in v11 (`currency:'GBP'`) — confirm no multi-currency need | client | ☐ |
@@ -58,6 +58,6 @@ Notifications/email, dashboards beyond spec §11, PrintVis/Odoo (buy alternative
 - [ ] D1–D6 collected
 - [ ] X1–X5 collected
 - [x] `integration_outbox` table + `kind` enum shipped in MVP schema (rows unused until Phase 4) — worker groundwork shipped 2026-10-04: migration `0005` backoff/claim columns, `enqueueOutbox`/`dispatchOutboxOnce`/`retryOutbox`, `npm run outbox:worker` (15 s pg-boss tick), admin retry endpoint, runbook §4c; **senders still empty → DPD/Xero emission lands with D1–D6/X1–X5 below**
-- [ ] Domain events list frozen + versioned (`job-header`, `order-lines`, `stage`, `dispatch`, `stock.*`)
+- [x] Domain events list frozen + versioned — **2026-10-05**: `09-domain-events.md` + `lib/events/domain-events.ts` (14 events: 8 audit kinds + 6 `stock.*`, envelope, table-schema freeze ≥1 release, `SCHEMA_VERSION=1`, freeze-guard tests); supersets the named 5 families, includes all 8 L2 audit kinds
 - [ ] Secrets manager choice + rotation documented (spec §18)
 - [ ] Load test: 30 calls/min throttle + queue drain verified against DPD stage env

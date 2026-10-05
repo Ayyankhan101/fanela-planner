@@ -12,6 +12,7 @@ Paperwork only. **Status: all decisions locked 2026-09-30 ("all defaults").** No
 | [06-migration-mapping.md](06-migration-mapping.md) | v11→target field map, status maps, shipment inference, sequence | ✅ done |
 | [07-integrations-scope.md](07-integrations-scope.md) | DPD + Xero: MVP manual now, Phase-4 prerequisites D1–D6 / X1–X5 | ✅ done |
 | [08-open-items-tracker.md](08-open-items-tracker.md) | OI-1…8 + F4–F11 — **all resolved/acknowledged** | ✅ done |
+| [09-domain-events.md](09-domain-events.md) | Frozen domain-event contract v1 (14 events, envelope, table freeze X2, change process) | ✅ frozen 2026-10-05 |
 
 ## Locked decisions (summary)
 

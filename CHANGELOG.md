@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.2] - 2026-10-05
+
+### Added
+- Domain-event freeze (plan P5, phase0 X2): frozen contract v1 — `docs/phase0/09-domain-events.md` (14 events: 8 `operational_audit` kinds + 6 `stock.*` types, envelope `{event, schemaVersion, occurredAt, source}`, table-schema freeze ≥ 1 release, change process), `lib/events/domain-events.ts` (name tuples, `SCHEMA_VERSION = 1`, zod source/event schemas), `tests/domain-events.test.ts` (inline-snapshot freeze guard, zod round-trip ×14, family cross-rejects, live-PG `stock_event_type` enum match, live-PG audit-action subset)
+- phase0 checklist: `07` readiness line "Domain events frozen + versioned" ✓ + X2 ☑ (clock starts 2026-10-05); `phase0/README.md` index row for `09`
+
+### Changed
+- Plan P5 note: event freeze landed; DPD/Xero sender impls + domain-event emission remain gated on D1–D6 / X1–X5
+
 ## [0.2.1] - 2026-10-04
 
 ### Added
