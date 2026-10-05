@@ -20,6 +20,7 @@ const LABEL: Record<string, string> = {
   re_swatch: "Re-swatch",
 };
 const DECISIONS = new Set(["approved", "rejected", "re_swatch"]);
+const REASON_REQUIRED = new Set(["rejected", "re_swatch"]);
 
 export function SwatchPanel({
   jobId,
@@ -151,7 +152,7 @@ export function SwatchPanel({
                   {next.map((t) => (
                     <button
                       key={t}
-                      onClick={() => move(a, t, DECISIONS.has(t))}
+                      onClick={() => move(a, t, REASON_REQUIRED.has(t))}
                       disabled={busy !== ""}
                       className={`${btnCls} !px-2 !py-1 !text-xs ${t === "approved" ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400" : ""}`}
                     >
