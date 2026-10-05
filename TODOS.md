@@ -16,11 +16,11 @@ Open items discovered during development. Checked = done.
 **Priority:** P0
 **Depends on:** None
 
-**C3 gate record (2026-10-03, P4 close):** Owner = **unassigned** (placeholder per client instruction — replace with a real name when known); target date = **2026-10-17**. No real dataset exists yet; CEO C2 `analyze-backup.mjs` fires the moment a sample arrives.
+**C3 gate record (2026-10-03, P4 close):** Owner = **project owner (client)** (assigned 2026-10-05, replaces the unassigned placeholder); target date = **2026-10-17** (unchanged). Acquisition itself still open: no real dataset exists yet; CEO C2 `analyze-backup.mjs` fires the moment a sample arrives.
 
 ### Operator demo at P3 close
 
-**Recorded 2026-10-03 (C5):** operator = **project owner (client) — solo run**; flow = job-create → dispatch through the P3 screen; half-day max; date booked by owner (P3 closed 2026-10-03). Status: scheduled.
+**Recorded 2026-10-03 (C5):** operator = **project owner (client) — solo run**; flow = job-create → dispatch through the P3 screen; half-day max (P3 closed 2026-10-03). **Date booked 2026-10-05: 2026-10-10.** Status: booked (entry closes when the run is accepted).
 
 **What:** One named operator runs job-create → dispatch through the P3 screen (half-day max); schedule at P3 close.
 
@@ -56,7 +56,9 @@ Open items discovered during development. Checked = done.
 **Priority:** P1
 **Depends on:** Success metric definition, operator demo
 
-**Draft (2026-10-03, CC) — awaiting owner confirm (date + shutdown owner are human-only):**
+**Confirmed 2026-10-05 (owner): date rule + shutdown owner approved as drafted below; concrete cutover date fills once the gate-in date is known.**
+
+**Draft (2026-10-03, CC; owner-confirmed 2026-10-05):**
 - **Gate-in:** C3 dry-run passes (full legacy export imports clean, spot-reconcile Δ=0) + C5 operator demo accepted + prod runbook (`docs/ops/runbook.md`) live + monitoring proven on prod for ≥5 working days.
 - **Parallel-run:** 14 working days dual entry (legacy + Fanela), daily reconciliation = job count Δ=0 and no Fanela-only write failures; any Δ>0 resets the counter.
 - **Metrics at cutover:** take C7 baselines — (1) median minutes/job (legacy vs Fanela), (2) % live jobs tracked in Fanela (target 100% at shutdown).

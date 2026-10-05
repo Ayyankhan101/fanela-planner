@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.4] - 2026-10-05
+
+### Changed
+- Human-gate records (client decisions, `TODOS.md`): **C3** owner assigned = project owner (client) — replaces unassigned placeholder, target 2026-10-17 unchanged (acquisition open until sample lands); **C5** operator demo **booked 2026-10-10** (status scheduled → booked; entry closes at acceptance); **cutover plan owner-confirmed** — date rule (gate-in + 14 working days + 2 buffer) + shutdown owner (project owner) approved as drafted, concrete date fills at gate-in
+- `phase0/08` status log: appended dated 2026-10-05 row for the three gate records (C6 unchanged — depends first real import)
+
 ## [0.2.3] - 2026-10-05
 
 ### Added
