@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell } from "./bell";
+import { ThemeToggle } from "@/app/theme-toggle";
 
 export function Nav({
   user,
@@ -53,6 +54,7 @@ export function Nav({
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm text-zinc-500">
+          <ThemeToggle />
           <Bell initialCount={unreadCount} enabled={showBell} />
           <span>
             {user.name} <span className="text-zinc-400">({user.roles.join(", ")})</span>

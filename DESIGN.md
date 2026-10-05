@@ -9,8 +9,11 @@ changes here first.
 - Tailwind CSS v4 (`@import "tailwindcss"` + `@theme inline`), no component library.
 - Fonts: Geist Sans / Geist Mono via `next/font/google`, exposed as
   `--font-geist-sans` / `--font-geist-mono`.
-- Dark mode: `prefers-color-scheme: dark` media query (system-driven, no manual
-  toggle). Component-level `dark:` variants mirror light classes.
+- Dark mode: class-driven — `.dark` on `<html>` via the nav/login `ThemeToggle`,
+  choice persisted in `localStorage.theme`. First paint falls back to
+  `prefers-color-scheme` through a pre-paint inline script in `app/layout.tsx`
+  (no flash). Tailwind `dark:` variant is `@custom-variant dark` in
+  `app/globals.css`; component-level `dark:` variants mirror light classes.
 
 ## Typography
 
@@ -92,5 +95,6 @@ Real UI states live in `designs/import-wizard-20261001/`
 ## Non-goals
 
 - No brand accent color, illustrations, or marketing typography — internal ops tool.
-- No client-side theme toggle (system preference is the contract).
+- No theme system beyond the single light/dark toggle (no accent themes, no
+  scheduled switching).
 - No animation beyond default Tailwind transitions on hover/focus.
