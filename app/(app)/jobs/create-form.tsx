@@ -14,6 +14,8 @@ export function JobCreateForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [customerId, setCustomerId] = useState("");
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [custOpen, setCustOpen] = useState(false);
   const [jobNumber, setJobNumber] = useState("");
   const [printName, setPrintName] = useState("");
   const [po, setPo] = useState("");
@@ -30,6 +32,10 @@ export function JobCreateForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!customerId) {
+      setError("Select a customer from the list.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -84,15 +90,47 @@ export function JobCreateForm() {
           <input required value={jobNumber} onChange={(e) => setJobNumber(e.target.value)}
             className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
         </label>
-        <label className="text-sm">
+        <label className="relative block text-sm">
           Customer *
-          <select required value={customerId} onChange={(e) => setCustomerId(e.target.value)}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700">
-            <option value="">Select…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+          <input
+            required
+            value={customerQuery}
+            onChange={(e) => {
+              setCustomerQuery(e.target.value);
+              setCustomerId("");
+              setCustOpen(true);
+            }}
+            onFocus={() => setCustOpen(true)}
+            onBlur={() => setTimeout(() => setCustOpen(false), 150)}
+            placeholder="Type to search customers…"
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700"
+          />
+          {custOpen && (
+            <ul className="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
+              {(customerQuery.trim()
+                ? customers.filter((c) => c.name.toLowerCase().includes(customerQuery.trim().toLowerCase()))
+                : customers
+              )
+                .slice(0, 50)
+                .map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setCustomerId(c.id);
+                        setCustomerQuery(c.name);
+                        setCustOpen(false);
+                      }}
+                      className="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    >
+                      {c.name}
+                    </button>
+                  </li>
+                ))}
+              {customers.length === 0 && <li className="px-3 py-1.5 text-sm text-zinc-500">Loading customers…</li>}
+            </ul>
+          )}
         </label>
         <label className="text-sm">
           Customer PO
