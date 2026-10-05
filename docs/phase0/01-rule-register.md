@@ -71,8 +71,8 @@ Each rule becomes an automated test in Phases 1–3 (UAT checklist, spec §14).
 | D2 | Department users see only their own department's stages; job detail page shows all statuses. | ✓ dept scoping in stage routes — **P2 test green** (rules-d D2, probe-p2) |
 | D3 | Operator may update only own department's stage; Admin / Operations override. | ✓ own-dept or Admin/Ops; else 403 dept message — **P2 test green** (rules-d D3) |
 | D4 | Stage data: notes, waste qty, reprint qty, quantity, completed/remaining, start/finish timestamps, completing user. | ✓ stage fields incl. timestamps + completing user — **P2 test green** (rules-d D4) |
-| D5 | Completing a stage removes it from that department's Active queue only; other queues unaffected. | ✓ queue filter by completed status — **P2 test green** (rules-d) |
-| D6 | Total prints = pieces × count of selected print positions. | ✓ print total formula — **P2 test green** (rules-d D6) |
+| D5 | Completing a stage removes it from that department's Active queue only; other queues unaffected. | ✓ own-dept dashboard delta only — **P2 test green** (rules-d D5) |
+| D6 | Total prints = pieces × count of selected print positions. | ✓ formula in v11 (printTotal) — ⚠ no as-built surface or test; C6 audit 2026-10-06 |
 | D7 | Stage statuses: Waiting, Ready, In Progress, Blocked, Completed; stage auto-completes when completed ≥ quantity. | ✓ 5 statuses + auto-complete progress≥qty — **P2 test green** (rules-d D7) |
 | D8 | Completed stage can be **reopened** (sets back to In Progress, clears finishedAt) — must be audited in new system. | ✓ reopen: in_progress, finishedAt cleared, progress=qty−1, audited — **P2 test green** (rules-d D8) |
 | D9 | Dispatch stage auto-created if missing (`Dispatch required for overall completion`). | ✓ dispatch stage auto-created on job create — **P2 test green** (rules-d D1) |

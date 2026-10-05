@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { makeUser, makeRequest, query, randomUUID, type TestUser } from "./helpers";
 import { newCustomer, newJob, getJob, refreshStages, swatchWaive, type JobHandle } from "./fixtures";
+import { getDashboard, type DashboardData } from "@/lib/services/dashboard";
 import { PATCH as patchStage } from "@/app/api/jobs/[id]/stages/[stageId]/route";
 import { POST as finalise } from "@/app/api/jobs/[id]/dispatch/finalise/route";
 import { POST as cancel } from "@/app/api/jobs/[id]/cancel/route";
@@ -49,7 +50,7 @@ beforeAll(async () => {
   customerId = await newCustomer(adminCookie, `D Co ${suffix}`);
 });
 
-describe("D1 — job gets one stage per department, qty = line total", () => {
+describe("D1/D9 — job gets one stage per department, qty = line total (dispatch auto-created)", () => {
   it("9 stages, waiting, version 1, qty matches ordered", async () => {
     const job = await newJob(adminCookie, customerId, { lines: [{ skuText: "D1", qtyOrdered: 7 }, { skuText: "D1b", qtyOrdered: 3 }] });
     const stages = await refreshStages(adminCookie, job.id);
@@ -103,6 +104,32 @@ describe("D4/D7 — fields persist, progress auto-completes", () => {
     expect(done.status).toBe(200);
     row = await query(`SELECT status, progress, remaining, finished_at IS NOT NULL AS finished FROM job_stages WHERE id = $1`, [s.id]);
     expect(row[0]).toMatchObject({ status: "completed", progress: 10, remaining: 0, finished: true });
+  });
+});
+
+describe("D5 — completion moves own department's stage only", () => {
+  it("print completes → print dashboard counts shift by one; other departments unchanged", async () => {
+    const job = await newJob(adminCookie, customerId);
+    const before = await getDashboard();
+    const s = await stage(job, "print");
+    const done = await patch(job.id, s, adminCookie, { status: "in_progress", progress: 10 }); // auto-completes (D7)
+    expect(done.status).toBe(200);
+    const after = await getDashboard();
+
+    const counts = (d: DashboardData, key: string): Record<string, number> =>
+      d.stages.find((x) => x.key === key)?.counts ?? {};
+    const open = (c: Record<string, number>): number =>
+      (c.waiting ?? 0) + (c.ready ?? 0) + (c.in_progress ?? 0) + (c.blocked ?? 0);
+
+    const b = counts(before, "print");
+    const a = counts(after, "print");
+    expect((a.completed ?? 0)).toBe((b.completed ?? 0) + 1);
+    expect(open(a)).toBe(open(b) - 1); // active queue loses exactly this stage
+
+    for (const key of before.stages.map((x) => x.key)) {
+      if (key === "print") continue;
+      expect(counts(after, key), `dept ${key} untouched`).toEqual(counts(before, key));
+    }
   });
 });
 

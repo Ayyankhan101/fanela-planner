@@ -40,6 +40,8 @@ Open items discovered during development. Checked = done.
 
 **Context:** Test-mapping table maps 77 register IDs to files, but files don't carry reverse tags. Do at first real import so drift is caught against real rows.
 
+**Status (2026-10-06):** Tagging half done — `tests/rule-coverage.test.ts` enforces all 77 register IDs referenced in tests/runbook (D6 exception: no as-built total-prints surface; register row corrected). Remaining: first-real-import drift audit against real rows.
+
 **Effort:** S (human) / S (CC)
 **Priority:** P2
 **Depends on:** First real import (CEO C3 dry-run)
