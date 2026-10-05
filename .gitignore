@@ -21,3 +21,6 @@ storage/uploads/
 
 # regenerable fixture artifacts (node fixtures/generate.mjs)
 fixtures/*.json
+
+# QA session artifacts (report + screenshots force-added; auth-state.json never)
+.gstack/
