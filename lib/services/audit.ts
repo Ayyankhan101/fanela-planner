@@ -51,7 +51,9 @@ export async function listAudit(
               ELSE NULL
             END AS dept_key
        FROM operational_audit e
-      WHERE ($1::uuid IS NULL OR e.job_id = $1)
+      WHERE ($1::text IS NULL
+            OR lower(e.job_id::text) LIKE lower($1) || '%'
+            OR EXISTS (SELECT 1 FROM jobs j WHERE j.id = e.job_id AND j.job_number = $1))
         AND ($2::text IS NULL OR e.entity_type = $2)
         AND ($3::bool OR e.action <> 'order-lines')
       ORDER BY e.ts DESC

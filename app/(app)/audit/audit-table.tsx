@@ -54,7 +54,7 @@ export function AuditTable() {
         <input
           value={jobId}
           onChange={(e) => setJobId(e.target.value)}
-          placeholder="Filter by job UUID"
+          placeholder="Filter by job number or UUID"
           className={`${inputCls} w-72`}
         />
         <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={inputCls}>
@@ -74,7 +74,7 @@ export function AuditTable() {
       {loading ? (
         <p className="text-sm text-zinc-500">Loading…</p>
       ) : events.length === 0 ? (
-        <p className="text-sm text-zinc-500">No events match.</p>
+        !error && <p className="text-sm text-zinc-500">No events match.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
