@@ -22,6 +22,29 @@ Supervisor (pick one, one host only):
 ```bash
 # systemd unit ExecStart=/usr/bin/npm start  (Restart=always)
 # or pm2 start npm --name fanela -- start
+# this box: launchd KeepAlive — ~/Library/LaunchAgents/com.fanela.app.plist
+```
+
+### Scheduled jobs (launchd user agents)
+
+Four recurring jobs run as launchd agents; versioned plists live in
+`ops/launchd/`, installed copies in `~/Library/LaunchAgents/`:
+
+| Label | When | Script |
+|---|---|---|
+| `com.fanela.backup` | daily 01:30 | `scripts/nightly-backup.sh` |
+| `com.fanela.integrity` | daily 02:00 | `scripts/l4-check.sh` |
+| `com.fanela.sweep` | daily 03:00 | `npm run storage:sweep` |
+| `com.fanela.uptime` | every 5 min | `scripts/uptime-probe.sh` |
+
+```bash
+# install/refresh after editing a plist:
+cp ops/launchd/*.plist ~/Library/LaunchAgents/
+for l in com.fanela.backup com.fanela.integrity com.fanela.sweep com.fanela.uptime; do
+  launchctl bootout "gui/$(id -u)/$l" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/$l.plist
+done
+# logs: logs/{backup,integrity,sweep,uptime}.{out,err}.log (*.log gitignored)
 ```
 
 Config lives in `.env` (`DATABASE_URL`, optional seed overrides). Never commit
@@ -31,45 +54,56 @@ Config lives in `.env` (`DATABASE_URL`, optional seed overrides). Never commit
 
 ## 2. B1 — Nightly backup + restore drill
 
-### Backup (cron, daily 01:30)
+### Backup (launchd `com.fanela.backup`, daily 01:30)
 
 ```bash
-STAMP=$(date +%Y%m%d)
-DEST=/backups/fanela            # on a different disk/host than the DB
-mkdir -p "$DEST"
-pg_dump --format=custom --no-owner \
-  --dbname="$DATABASE_URL" \
-  --file="$DEST/fanela-$STAMP.dump"
-# B1: mirror off-box (MinIO/S3 when available; MVP: rsync/scp to second host)
-rsync -a "$DEST/" offbox-host:/backups/fanela/
-# retention ≥30 d
-find "$DEST" -name 'fanela-*.dump' -mtime +30 -delete
+scripts/nightly-backup.sh
+# → ~/backups/fanela/fanela-YYYYMMDD.dump, retention 30 d (log: logs/backup.*.log)
+# Dump runs as local superuser over the unix socket (peer auth): pg_dump runs
+# with row_security=off and 003's FORCE ROW LEVEL SECURITY rejects that even
+# for the table owner — only a superuser bypasses (spec §6.3). Never point the
+# dump directly at $DATABASE_URL (owner role) — it errors on artwork_events.
 ```
 
 `pg_dump --format=custom` = compressed + single-file + restorable to any
 PG ≥ version of origin.
 
+**Off-box mirror (B1): pending** — no second host yet (MVP dest `~/backups/fanela`
+is the same disk as the DB). When a target exists: mirror nightly, including
+`storage/uploads/` (§8):
+`rsync -a ~/backups/fanela/ offbox-host:/backups/fanela/`
+
 ### Restore drill (quarterly, and after any migration)
 
 ```bash
-# 1. restore to a scratch DB — never over prod
-createdb fanela_restore_drill
-pg_restore --dbname=fanela_restore_drill \
-  --no-owner --exit-on-error \
-  /backups/fanela/fanela-YYYYMMDD.dump
+# 1. restore to a scratch DB — never over prod (create as owner/superuser,
+#    hand ownership to the app role so the boot check runs with prod perms;
+#    fanela has no CREATEDB)
+psql -d fanela -c "CREATE DATABASE fanela_restore_drill"
+psql -d fanela -c "ALTER DATABASE fanela_restore_drill OWNER TO fanela"
+SCRATCH="${DATABASE_URL%/*}/fanela_restore_drill"
+pg_restore --dbname="$SCRATCH" --no-owner --exit-on-error \
+  ~/backups/fanela/fanela-YYYYMMDD.dump
 
 # 2. spot-check: counts + newest audit row
-psql -d fanela_restore_drill -c \
+psql "$SCRATCH" -c \
   "SELECT (SELECT count(*) FROM jobs),
           (SELECT count(*) FROM stock_events),
           (SELECT max(ts) FROM operational_audit);"
 
 # 3. app boots against it (temporary DATABASE_URL) — login + one list page
+DATABASE_URL="$SCRATCH" PORT=3001 npm start   # curl :3001/login, login+MFA, /jobs
+
 # 4. drop scratch, log drill date in this file
+psql -d fanela -c "DROP DATABASE fanela_restore_drill"
 ```
 
-**Drill log:** `2026-10-03 — procedure written; first drill scheduled with
-first nightly dump.` → append `date + result` after every drill.
+**Drill log:**
+- `2026-10-03 — procedure written; first drill scheduled with first nightly dump.`
+- `2026-10-05 — PASS (first drill): 10 MB dump → restore OK (6955 jobs / 6142
+  users / 32428 audit / 1526 stock / 1247 artwork) → app boot :3001 (login
+  page 200, login `{"mfa":true}`, MFA `{"mfa":false}`, /jobs 200, /api/jobs 200)
+  → dropped.`
 
 ## 3. B2 — Export artefact retention
 
@@ -79,7 +113,7 @@ evidence. Keep the pre-cutover export **≥ 90 days after go-live** in
 off-box with the nightly backups. Delete only after the owner signs off the
 cutover in `TODOS.md`.
 
-## 4. L4 — Nightly integrity check (cron, 02:00)
+## 4. L4 — Nightly integrity check (launchd `com.fanela.integrity`, 02:00)
 
 ```bash
 psql "$DATABASE_URL" <<'SQL'
@@ -107,10 +141,10 @@ SELECT (SELECT count(*) FROM stock_events)  AS stock_events,
 SQL
 ```
 
-Alert on nonzero (a)/(b), or on query error. Script it as
-`scripts/l4-check.sh` + cron if you want mail/webhook delivery.
+Alert on nonzero (a)/(b), or on query error. Installed as
+`scripts/l4-check.sh` (exits nonzero on violation; alert = `logs/integrity.err.log`).
 
-## 4b. Storage sweep (cron, 03:00)
+## 4b. Storage sweep (launchd `com.fanela.sweep`, 03:00)
 
 ```bash
 npm run storage:sweep     # storage/uploads: orphans >24 h + originals >UPLOAD_RETENTION_DAYS (90 d)
@@ -159,15 +193,16 @@ body) — requeues `failed` / stuck rows immediately; `sent` rows 409.
 - HTTP 5xx: grep app log for the request path + `requestId`; audit trail of
   data changes = `GET /api/audit` (or `operational_audit` directly).
 
-## 6. Uptime probe (cron every 5 min)
+## 6. Uptime probe (launchd `com.fanela.uptime`, every 5 min)
 
 ```bash
-CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:3000/login)
-[ "$CODE" = "200" ] || echo "fanela down: HTTP $CODE" >&2   # pipe to mail/push
+scripts/uptime-probe.sh    # curl /login, alert to logs/uptime.err.log
 ```
 
-Two consecutive failures → page whoever owns the box. (No `/api/health`
-endpoint by design; `/login` is the cheapest unauthenticated 200.)
+Alert sink is **log-only for now** (no mailer/push on this box) — grep
+`logs/uptime.err.log`, or wire a sink when one exists. Two consecutive
+failures → page whoever owns the box. (No `/api/health` endpoint by design;
+`/login` is the cheapest unauthenticated 200.)
 
 ## 7. First red is blocker (native R10)
 
