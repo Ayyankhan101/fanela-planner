@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/app/theme-toggle";
 
 type Stage = "password" | "mfa" | "setup" | "recovery_codes";
 
@@ -81,6 +82,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 dark:bg-black">
+      <div className="fixed right-4 top-4">
+        <ThemeToggle />
+      </div>
       <form
         onSubmit={submit}
         className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
