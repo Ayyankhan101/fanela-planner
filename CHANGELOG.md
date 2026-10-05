@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3] - 2026-10-05
+
+### Added
+- Secrets management decision + rotation doc (`docs/ops/secrets.md`, closes phase0 `07` readiness line 62 / spec §18): `.env` @ `chmod 600` chosen (matrix vs Keychain/direnv/cloud SM — revisit at VPS + MinIO §8), inventory of 8 current secrets + future D6/X3/MinIO rows, rotation sequences (`ALTER ROLE`, `user:add` re-hash, SQL TOTP clear-then-re-enroll — enroll route is first-time-only, `DELETE FROM sessions` force re-login, `AUTH_SECRET` vestigial delete), event-based trigger policy, hygiene rules (600 mandate, DB dumps carry hashes + TOTP)
+
+### Changed
+- Runbook §1: `chmod 600` mandate + secrets.md link; `.env.example` header: 600 in the copy one-liner
+
 ## [0.2.2] - 2026-10-05
 
 ### Added

@@ -25,7 +25,8 @@ Supervisor (pick one, one host only):
 ```
 
 Config lives in `.env` (`DATABASE_URL`, optional seed overrides). Never commit
-`.env`. Schema changes = `npm run db:migrate && npm run db:security`
+`.env`; keep it `chmod 600` — secrets inventory + rotation procedures live in
+[secrets.md](secrets.md). Schema changes = `npm run db:migrate && npm run db:security`
 (`db:security` re-applies grants + RLS — required after any migration).
 
 ## 2. B1 — Nightly backup + restore drill
