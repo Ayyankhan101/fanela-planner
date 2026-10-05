@@ -65,7 +65,7 @@ describe("FX-5 readiness matrix", () => {
     expect(r.readiness.gates.screens).toEqual({ active: true, pass: true });
   });
 
-  it("Green — all active gates pass", async () => {
+  it("Green — all active gates pass (G5 stock gate all-of)", async () => {
     const job = await newJob(cookie, customerId);
     await passStock(cookie, job.id);
     await fillScreens(cookie, job.id);
