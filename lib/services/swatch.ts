@@ -167,7 +167,7 @@ async function patchAttemptTx(
   if (target !== a.status && !FLOW[a.status]?.includes(target)) {
     throw { status: 422, message: `Invalid swatch transition: ${a.status} → ${target}.` };
   }
-  if (DECISIONS.includes(target) && !input.reason?.trim()) {
+  if ((target === "rejected" || target === "re_swatch") && !input.reason?.trim()) {
     throw { status: 422, message: "A reason is required for reject / re-swatch decisions." };
   }
 
