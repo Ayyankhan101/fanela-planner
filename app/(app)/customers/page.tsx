@@ -1,16 +1,16 @@
-import { query } from "@/lib/db";
+import Link from "next/link";
 import { getSessionUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/access";
+import { listCustomersPage } from "@/lib/services/customers";
 import { CustomerCreateForm } from "./create-form";
 import { ExportDropdown } from "../export-dropdown";
 
-export default async function CustomersPage() {
+export default async function CustomersPage({ searchParams }: PageProps<"/customers">) {
+  const raw = (await searchParams).page;
+  const pageParam = Array.isArray(raw) ? raw[0] : raw;
   const user = await getSessionUser();
   if (!user) return null;
-  const customers = await query<Record<string, unknown>>(
-    `SELECT id, name, contact_name, email, phone, default_dispatch_method, account_ref
-       FROM customers WHERE active = true ORDER BY name`,
-  );
+  const { customers, total, page, pages } = await listCustomersPage(Number(pageParam) || 1);
   const canEdit = hasPermission(user, "customers.edit");
   const canExport = hasPermission(user, "import.export");
 
@@ -50,6 +50,31 @@ export default async function CustomersPage() {
           </tbody>
         </table>
       </div>
+      {pages > 1 && (
+        <nav className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400" aria-label="Customers pagination">
+          <span>
+            {page > 1 ? (
+              <Link href={`/customers?page=${page - 1}`} className="rounded border border-zinc-300 px-2 py-1 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
+                ← Previous
+              </Link>
+            ) : (
+              <span className="px-2 py-1 opacity-40">← Previous</span>
+            )}
+          </span>
+          <span>
+            Page {page} of {pages} · {total} customers
+          </span>
+          <span>
+            {page < pages ? (
+              <Link href={`/customers?page=${page + 1}`} className="rounded border border-zinc-300 px-2 py-1 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
+                Next →
+              </Link>
+            ) : (
+              <span className="px-2 py-1 opacity-40">Next →</span>
+            )}
+          </span>
+        </nav>
+      )}
     </div>
   );
 }
