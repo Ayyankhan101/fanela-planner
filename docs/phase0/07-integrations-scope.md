@@ -57,7 +57,7 @@ Notifications/email, dashboards beyond spec §11, PrintVis/Odoo (buy alternative
 
 - [ ] D1–D6 collected
 - [ ] X1–X5 collected
-- [x] `integration_outbox` table + `kind` enum shipped in MVP schema (rows unused until Phase 4) — worker groundwork shipped 2026-10-04: migration `0005` backoff/claim columns, `enqueueOutbox`/`dispatchOutboxOnce`/`retryOutbox`, `npm run outbox:worker` (15 s pg-boss tick), admin retry endpoint, runbook §4c; **senders still empty → DPD/Xero emission lands with D1–D6/X1–X5 below**
+- [x] `integration_outbox` table + `kind` enum shipped in MVP schema (rows unused until Phase 4) — worker groundwork shipped 2026-10-04: migration `0005` backoff/claim columns, `enqueueOutbox`/`dispatchOutboxOnce`/`retryOutbox`, `npm run outbox:worker` (15 s pg-boss tick), admin retry endpoint, runbook §4c; **senders still empty → emission groundwork landed 2026-10-06 (`lib/services/emit.ts`, kind = event name, tests `tests/domain-emission.test.ts`); DPD/Xero senders + `dpd|xero` routing still land with D1–D6/X1–X5 below**
 - [x] Domain events list frozen + versioned — **2026-10-05**: `09-domain-events.md` + `lib/events/domain-events.ts` (14 events: 8 audit kinds + 6 `stock.*`, envelope, table-schema freeze ≥1 release, `SCHEMA_VERSION=1`, freeze-guard tests); supersets the named 5 families, includes all 8 L2 audit kinds
 - [x] Secrets manager choice + rotation documented — **2026-10-05**: `docs/ops/secrets.md` (`.env` @ 600 chosen, inventory of 8 current + D6/X3/MinIO future rows, rotation sequences, event-based triggers, hygiene rules)
 - [ ] Load test: 30 calls/min throttle + queue drain verified against DPD stage env

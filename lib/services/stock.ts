@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { updateReadinessCache, STOCK_ISSUES } from "./readiness";
+import { enqueueDomainEvent } from "./emit";
 
 // Stock history append-only (L1): app role INSERT+SELECT only; events always win.
+// Every stock event also emits a stock.<type> domain-event outbox row (emit.ts).
 
 export type LineSnapshot = {
   scope: "line" | "job";
@@ -57,6 +59,18 @@ export async function appendStockEvent(e: {
       e.userId ?? null,
     ],
   );
+  await enqueueDomainEvent(`stock.${e.type}`, {
+    id,
+    legacyId: null,
+    jobId: e.jobId,
+    jobLineId: e.jobLineId ?? null,
+    type: e.type,
+    qty: e.qty ?? null,
+    reason: e.reason ?? null,
+    payload: e.payload != null ? JSON.stringify(e.payload) : null,
+    correctsEventId: e.correctsEventId ?? null,
+    userId: e.userId ?? null,
+  });
   return id;
 }
 

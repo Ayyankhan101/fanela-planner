@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { query } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
+import { AUDIT_EVENT_NAMES, type AuditEventName } from "@/lib/events/domain-events";
+import { enqueueDomainEvent } from "./emit";
 
 // Append-only operational audit (spec §4.11 / L2). App DB role = INSERT+SELECT only.
+// Frozen audit actions also emit a domain-event outbox row (emit.ts); non-frozen
+// actions write the audit row only (contract-guard — live actions ⊆ frozen list).
 export async function audit(input: {
   entityType: string;
   entityId?: string | null;
@@ -13,11 +17,12 @@ export async function audit(input: {
   after?: unknown;
   requestId?: string;
 }): Promise<void> {
+  const id = randomUUID();
   await query(
     `INSERT INTO operational_audit (id, entity_type, entity_id, job_id, action, actor_id, actor_role, before, after, request_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
     [
-      randomUUID(),
+      id,
       input.entityType,
       input.entityId ?? null,
       input.jobId ?? null,
@@ -29,6 +34,20 @@ export async function audit(input: {
       input.requestId ?? null,
     ],
   );
+  if ((AUDIT_EVENT_NAMES as readonly string[]).includes(input.action)) {
+    await enqueueDomainEvent(input.action as AuditEventName, {
+      id,
+      legacyId: null,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
+      jobId: input.jobId ?? null,
+      actorId: input.user?.id ?? null,
+      actorRole: input.user?.roles.join(",") ?? null,
+      before: input.before ?? null,
+      after: input.after ?? null,
+      requestId: input.requestId ?? null,
+    });
+  }
 }
 
 // L2–L5: append-only read with scoping — dept users see own-department events only;
