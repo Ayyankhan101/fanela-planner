@@ -25,7 +25,7 @@ v11 is the executable specification. Every operational rule is a requirement. On
 | ORM / DB | Drizzle ORM + PostgreSQL 16 |
 | Auth | Built-in Auth.js credentials provider, Argon2id password hashes, TOTP MFA |
 | Queue | pg-boss (Postgres-backed; no Redis) |
-| File storage | MinIO (S3-compatible), private buckets |
+| File storage | MinIO (S3-compatible), private buckets — **as-built MVP: local disk `storage/uploads/`** (`files.bucket='local'`); MinIO/S3 deferred until multi-instance hosting (checkpoint in runbook §MinIO/S3 + TODOS; plan D20) |
 | Hosting | Self-hosted VPS via Docker Compose: `caddy + app + worker + postgres + minio` |
 | MVP scope | Full doc MVP (all must-haves from assessment §18); DPD API and Xero adapters after |
 | Build vs buy | Off-the-shelf print MIS/ERP (PrintVis, Odoo) considered and rejected — see §20 |
@@ -332,6 +332,8 @@ DISPATCH
 FILES
   files                    id, entity_type, entity_id, name, size, mime, checksum,
                            bucket, key, uploaded_by, uploaded_at, immutable bool
+                           -- as-built MVP: bucket='local', key=relative path under
+                           -- storage/uploads/ (quota + retention sweep in TODOS §storage)
 
 AUDIT / OPS
   operational_audit        id, entity_type, entity_id, job_id?, action, actor_id, actor_role,
@@ -419,13 +421,15 @@ Admin, Operations Manager, Office, Director, Dispatch, Packing, Department Opera
 
 ## 11. Excel Module
 
-- Export: ExcelJS in pg-boss job → file to MinIO → signed download URL; columns filtered by caller permissions (costs/prices stripped for unprivileged).
-  - Cost-column decision happens **inside the worker at write time**: same report requested by Director includes cost columns; requested by Office strips them before the `.xlsx` bytes are produced. Never generate full then redact; never trust a column-selection flag from the client.
+- Export: **as-built — streams the .xlsx in-request and discards; no pg-boss job, no MinIO object, no signed URL, no export history table** (Step-0 streaming decision, accepted; plan NOT-in-scope). Columns still filtered by caller permissions server-side at write time (costs/prices stripped for unprivileged) via `lib/services/export.ts`.
+  - Cost-column decision happens **inside the export service at write time**: same report requested by Director includes cost columns; requested by Office strips them before the `.xlsx` bytes are produced. Never generate full then redact; never trust a column-selection flag from the client.
+  - **Deviation vs this spec (§11 original design)**: pg-boss → MinIO → signed download URL path deferred; revisit when export history/persistence becomes a requirement (multi-instance hosting or client-requested report storage).
 - Import: as §4.10; validation covers required fields, unknown customers/products/SKUs, duplicate job numbers; preview must be confirmed by a second explicit action.
 
 ## 12. Integrations (post-MVP, designed-for)
 
 - Pattern: operational event → `integration_outbox` → worker → external API → status/attempt log → retry with backoff. Failures never block operational workflow.
+  - **As-built note (2026-10-06)**: `integration_outbox.kind` = frozen domain-event name (`lib/events/domain-events.ts`, SCHEMA_VERSION=1); no senders registered yet — emission groundwork (`lib/services/emit.ts`) writes rows with `status='pending'`, `attempts=0` by design. DPD/Xero senders + `dpd|xero` routing land with D1–D6/X1–X5 (see `docs/phase0/07-integrations-scope.md`).
 - DPD: adapter described in §4.9; credentials server-side only.
 - Xero: customer master → contact sync keyed on customer reference; invoice/sales-order from job lines; tax/price sync only for authorised roles; Xero is never the operational database.
 - Neither is scheduled before the operational core is stable.

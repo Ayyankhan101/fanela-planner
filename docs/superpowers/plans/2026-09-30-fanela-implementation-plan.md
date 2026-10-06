@@ -132,8 +132,8 @@ Kickoff → P1 ✅ → P1.5 (withTransaction + dep cleanup) → P2 ✅ → P3 �
 - **Full design system (DESIGN.md)** — deferred to TODOS.md (Q8.1: /design-consultation session before production UX work).
 - **AI-generated mockups for import wizard** — deferred to TODOS.md (Q8.2: designer key 401'd; backfill when valid key available; text contract gates T4, visuals don't).
 - **Readiness cache invalidation via DB triggers** — app-level `updateReadinessCache` pattern retained (as-built convention).
-- **Export file storage/persistence** — exports stream and discard; no export history table (deviates from spec L422 pg-boss→MinIO signed-URL design — accepted Step-0 streaming decision; spec update pending).
-- **MinIO/S3 for uploaded import files** — MVP stores originals on local disk (`storage/uploads/`, E5); object-store migration checkpoint in `TODOS.md` when multi-instance hosting appears.
+- **Export file storage/persistence** — exports stream and discard; no export history table (deviates from spec L422 pg-boss→MinIO signed-URL design — accepted Step-0 streaming decision; spec §11 updated 2026-10-06 with as-built + deviation note).
+- **MinIO/S3 for uploaded import files** — MVP stores originals on local disk (`storage/uploads/`, E5); object-store migration checkpoint in `TODOS.md` + runbook when multi-instance hosting appears (spec §2/§6.1 as-built notes added 2026-10-06).
 - **Operator demo at P3 close (C5)** — deferred to TODOS.md: needs staff time; owner schedules (CEO 3.3 adoption loop).
 - **Rule-ID/review-date tagging + rule audit at first real import (C6)** — deferred to TODOS.md: provenance hygiene, not a blocker.
 - **Adoption/success metric definition (C7)** — deferred to TODOS.md: metric is user-defined.
