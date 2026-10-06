@@ -36,15 +36,16 @@ Four recurring jobs run as launchd agents; versioned plists live in
 | `com.fanela.integrity` | daily 02:00 | `scripts/l4-check.sh` |
 | `com.fanela.sweep` | daily 03:00 | `npm run storage:sweep` |
 | `com.fanela.uptime` | every 5 min | `scripts/uptime-probe.sh` |
+| `com.fanela.outbox` | KeepAlive | `npm run outbox:worker` (§4c) |
 
 ```bash
 # install/refresh after editing a plist:
 cp ops/launchd/*.plist ~/Library/LaunchAgents/
-for l in com.fanela.backup com.fanela.integrity com.fanela.sweep com.fanela.uptime; do
+for l in com.fanela.backup com.fanela.integrity com.fanela.sweep com.fanela.uptime com.fanela.outbox; do
   launchctl bootout "gui/$(id -u)/$l" 2>/dev/null || true
   launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/$l.plist
 done
-# logs: logs/{backup,integrity,sweep,uptime}.{out,err}.log (*.log gitignored)
+# logs: logs/{backup,integrity,sweep,uptime,outbox,app}.{out,err}.log (*.log gitignored)
 ```
 
 Config lives in `.env` (`DATABASE_URL`, optional seed overrides). Never commit
@@ -104,6 +105,10 @@ psql -d fanela -c "DROP DATABASE fanela_restore_drill"
   users / 32428 audit / 1526 stock / 1247 artwork) → app boot :3001 (login
   page 200, login `{"mfa":true}`, MFA `{"mfa":false}`, /jobs 200, /api/jobs 200)
   → dropped.`
+- `2026-10-06 — PROD LIVE: app (`com.fanela.app`) + outbox worker
+  (`com.fanela.outbox`) supervised launchd KeepAlive; backup/integrity/sweep/
+  uptime agents installed (`ops/launchd/*.plist` versioned). Uptime probe
+  success-logging enabled — monitoring clock starts.`
 
 ## 3. B2 — Export artefact retention
 
@@ -163,13 +168,15 @@ pg-boss only fires the tick — no delayed pg-boss retries, so the two scheduler
 cannot race.
 
 ```bash
-npm run outbox:worker    # needs DATABASE_URL; supervise with Restart=always / KeepAlive
+npm run outbox:worker    # needs DATABASE_URL; supervised launchd KeepAlive
 ```
 
-One instance is fine (claims use `FOR UPDATE SKIP LOCKED`, so extra instances
-are safe, not faster than 25 rows/tick). pg-boss creates its own `boss` schema
-under `DATABASE_URL` — no `fanela_app` grants needed. The `outbox-tick`
-schedule (every 15 s) is created idempotently at worker start.
+Supervised as `com.fanela.outbox` (plist: `ops/launchd/com.fanela.outbox.plist`;
+logs `logs/outbox.{out,err}.log`). One instance is fine (claims use
+`FOR UPDATE SKIP LOCKED`, so extra instances are safe, not faster than 25 rows/tick).
+pg-boss creates its own `boss` schema under `DATABASE_URL` — no `fanela_app`
+grants needed. The `outbox-tick` schedule (every 15 s) is created idempotently
+at worker start.
 
 Monitor weekly / on alert:
 
@@ -196,13 +203,20 @@ body) — requeues `failed` / stuck rows immediately; `sent` rows 409.
 ## 6. Uptime probe (launchd `com.fanela.uptime`, every 5 min)
 
 ```bash
-scripts/uptime-probe.sh    # curl /login, alert to logs/uptime.err.log
+scripts/uptime-probe.sh    # curl /login — success → logs/uptime.out.log,
+                           # failure → logs/uptime.err.log (exit 1)
 ```
 
-Alert sink is **log-only for now** (no mailer/push on this box) — grep
-`logs/uptime.err.log`, or wire a sink when one exists. Two consecutive
-failures → page whoever owns the box. (No `/api/health` endpoint by design;
-`/login` is the cheapest unauthenticated 200.)
+Success lines (`YYYY-MM-DD HH:MM:SS fanela up: HTTP 200`) are the visible
+evidence for the cutover gate-in clause "monitoring proven on prod for ≥5
+working days" (`TODOS.md`). Alert sink is **log-only for now** (no mailer/push
+on this box) — grep `logs/uptime.err.log`, or wire a sink when one exists.
+Two consecutive failures → page whoever owns the box. (No `/api/health`
+endpoint by design; `/login` is the cheapest unauthenticated 200.)
+
+**Monitoring clock:** probe logging active from **2026-10-06** (success lines
+enabled; app + outbox supervised under launchd KeepAlive). Gate-in counts
+working days from first clean probe day through the ≥5 wd floor.
 
 ## 7. First red is blocker (native R10)
 
