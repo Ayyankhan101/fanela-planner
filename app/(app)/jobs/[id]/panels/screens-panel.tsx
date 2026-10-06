@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls, btnCls, send, sectionCls, titleCls } from "../../../ui";
+import { inputCls, btnCls, errorCls, send, sectionCls, titleCls } from "../../../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -75,7 +75,11 @@ export function ScreensPanel({ jobId, screen, canStage }: { jobId: string; scree
       ) : (
         <p className="text-sm text-zinc-500">No screen record.</p>
       )}
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mt-2">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
     </section>
   );
 }

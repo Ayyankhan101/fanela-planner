@@ -96,7 +96,7 @@ export function Bell({ initialCount, enabled }: { initialCount: number; enabled:
           setOpen(next);
           if (next) await openList();
         }}
-        className="relative rounded-md border border-zinc-300 px-2 py-1 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+        className="relative rounded-md border border-zinc-300 px-2 py-1.5 text-zinc-600 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -136,13 +136,13 @@ export function Bell({ initialCount, enabled }: { initialCount: number; enabled:
                     {!i.read_at && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />}
                     <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{i.title}</span>
                     {i.job_number && (
-                      <span className="ml-auto shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                      <span className="ml-auto shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500">
                         {i.job_number}
                       </span>
                     )}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-zinc-500">{i.body}</span>
-                  <span className="mt-0.5 block text-[10px] text-zinc-400">
+                  <span className="mt-0.5 block text-[10px] text-zinc-500">
                     {new Date(i.created_at).toLocaleString()}
                   </span>
                 </button>

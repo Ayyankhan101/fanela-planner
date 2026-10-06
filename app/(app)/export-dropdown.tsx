@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { btnCls } from "./ui";
 
 type ExportView = { key: string; label: string };
 
@@ -66,7 +67,7 @@ export function ExportDropdown({ q }: { q?: string }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={busy !== null}
-        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:hover:bg-zinc-900"
+        className={btnCls}
       >
         {busy ? "Preparing…" : "Export"}
       </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { errorCls, fieldCls, primaryCls } from "../ui";
 
 type Customer = { id: string; name: string };
 
@@ -70,10 +71,7 @@ export function JobCreateForm() {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-      >
+      <button onClick={() => setOpen(true)} className={primaryCls}>
         New job
       </button>
     );
@@ -82,13 +80,13 @@ export function JobCreateForm() {
   return (
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950"
+      className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
     >
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="text-sm">
           Job number *
           <input required value={jobNumber} onChange={(e) => setJobNumber(e.target.value)}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+            className={fieldCls} />
         </label>
         <label className="relative block text-sm">
           Customer *
@@ -103,10 +101,13 @@ export function JobCreateForm() {
             onFocus={() => setCustOpen(true)}
             onBlur={() => setTimeout(() => setCustOpen(false), 150)}
             placeholder="Type to search customers…"
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700"
+            role="combobox"
+            aria-expanded={custOpen}
+            aria-controls="job-create-customer-list"
+            className={fieldCls}
           />
           {custOpen && (
-            <ul className="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
+            <ul id="job-create-customer-list" className="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
               {(customerQuery.trim()
                 ? customers.filter((c) => c.name.toLowerCase().includes(customerQuery.trim().toLowerCase()))
                 : customers
@@ -135,22 +136,22 @@ export function JobCreateForm() {
         <label className="text-sm">
           Customer PO
           <input value={po} onChange={(e) => setPo(e.target.value)}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+            className={fieldCls} />
         </label>
         <label className="text-sm">
           Print / job name
           <input value={printName} onChange={(e) => setPrintName(e.target.value)}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+            className={fieldCls} />
         </label>
         <label className="text-sm">
           Dispatch date
           <input type="date" value={dispatchDate} onChange={(e) => setDispatchDate(e.target.value)}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+            className={fieldCls} />
         </label>
         <label className="text-sm">
           Priority (1 = highest)
           <input type="number" min={1} max={999} value={priority} onChange={(e) => setPriority(e.target.value)}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+            className={fieldCls} />
         </label>
       </div>
 
@@ -164,27 +165,30 @@ export function JobCreateForm() {
         </div>
         <div className="space-y-2">
           {lines.map((l, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_6rem_auto] gap-2">
+            <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_6rem_auto]">
               <input placeholder="Master SKU *" value={l.skuText}
                 onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, skuText: e.target.value } : x)))}
-                className="rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+                className={fieldCls} />
               <input placeholder="Colour" value={l.colour}
                 onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, colour: e.target.value } : x)))}
-                className="rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+                className={fieldCls} />
               <input placeholder="Qty *" type="number" min={0} value={l.qtyOrdered}
                 onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, qtyOrdered: e.target.value } : x)))}
-                className="rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+                className={fieldCls} />
               <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))}
-                className="text-sm text-red-500 hover:underline">Remove</button>
+                className="text-sm text-red-600 hover:underline dark:text-red-400">Remove</button>
             </div>
           ))}
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
       <div className="flex gap-3">
-        <button type="submit" disabled={busy}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
+        <button type="submit" disabled={busy} className={primaryCls}>
           {busy ? "Creating…" : "Create job"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="text-sm text-zinc-500 hover:text-zinc-700">

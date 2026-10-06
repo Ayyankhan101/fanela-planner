@@ -33,7 +33,7 @@ const EMPTY: Counts = { create: 0, skip: 0, error: 0, warn: 0, info: 0 };
 const SEVERITY_CLASS: Record<string, string> = {
   error: "text-red-600 dark:text-red-400",
   warn: "text-amber-600 dark:text-amber-400",
-  skip: "text-zinc-500 dark:text-zinc-400",
+  skip: "text-zinc-500 dark:text-zinc-500",
   create: "text-zinc-700 dark:text-zinc-300",
   info: "text-blue-600 dark:text-blue-400",
 };
@@ -229,8 +229,8 @@ export function ImportWizard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Import legacy data</h1>
-        <span className="rounded-md border border-zinc-300 px-2 py-0.5 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Import legacy data</h1>
+        <span className="rounded-md border border-zinc-300 px-2 py-0.5 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-500">
           Admin / Ops
         </span>
       </div>
@@ -249,7 +249,7 @@ export function ImportWizard() {
                   ? "border-zinc-900 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-50"
                   : state === "done"
                     ? "border-zinc-300 text-zinc-500 dark:border-zinc-700"
-                    : "border-zinc-200 text-zinc-400 dark:border-zinc-800"
+                    : "border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-500"
               }`}
             >
               {i + 1}. {s.label}
@@ -311,7 +311,7 @@ export function ImportWizard() {
                 className={`rounded-md border px-3 py-1 text-sm ${
                   filter === k
                     ? "border-zinc-900 font-medium dark:border-zinc-100"
-                    : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+                    : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-500"
                 }`}
               >
                 <span className={SEVERITY_CLASS[k]}>{counts[k]}</span> {k}
@@ -319,7 +319,7 @@ export function ImportWizard() {
             ))}
             <button
               onClick={() => loadPreview(batch!.id, filter === "issues" ? "all" : "issues", 1)}
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-500"
             >
               {filter === "issues" ? "Show all rows" : "Issues only"}
             </button>
@@ -408,14 +408,14 @@ export function ImportWizard() {
             <button
               onClick={() => setStep("upload")}
               disabled={busy}
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
             >
               Back
             </button>
             <button
               onClick={() => action("confirm", { counts })}
               disabled={busy}
-              className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+              className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-zinc-50 hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
             >
               Continue to confirm
             </button>
@@ -476,7 +476,7 @@ export function ImportWizard() {
             ))}
           </div>
           <div className="flex flex-wrap gap-3 text-sm">
-            <Link href="/jobs" className="rounded-md bg-zinc-900 px-4 py-1.5 font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900">
+            <Link href="/jobs" className="rounded-md bg-zinc-900 px-4 py-1.5 font-medium text-zinc-50 hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900">
               View imported jobs →
             </Link>
             <a
@@ -510,15 +510,15 @@ export function ImportWizard() {
             No imports yet. Upload a legacy JSON export to start.
           </p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-xs">
             <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
               <tr>
-                <th className="px-4 py-2">File</th>
-                <th className="px-4 py-2">Uploaded</th>
-                <th className="px-4 py-2">By</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">create/skip/error/warn</th>
-                <th className="px-4 py-2">Actions</th>
+                <th className="px-4 py-2 font-semibold">File</th>
+                <th className="px-4 py-2 font-semibold">Uploaded</th>
+                <th className="px-4 py-2 font-semibold">By</th>
+                <th className="px-4 py-2 font-semibold">Status</th>
+                <th className="px-4 py-2 font-semibold">create/skip/error/warn</th>
+                <th className="px-4 py-2 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -615,7 +615,7 @@ function ConfirmPanel({
           ))}
         </div>
       )}
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-zinc-600 dark:text-zinc-500">
         Import {counts.create} row(s), skip {counts.skip}, {counts.error} errored. Swatch approvals, shipments, photos
         and audit history are never imported (E4).
       </p>
@@ -629,7 +629,7 @@ function ConfirmPanel({
             inputMode="numeric"
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            className="w-40 rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-40 rounded-md border border-zinc-300 px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:focus-visible:outline-zinc-100"
           />
         </div>
       )}
@@ -637,14 +637,14 @@ function ConfirmPanel({
         <button
           onClick={onConfirmTyped}
           disabled={busy || !typedOk}
-          className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-zinc-50 hover:bg-zinc-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:focus-visible:outline-zinc-100"
         >
           {busy ? "Importing…" : "Confirm and import"}
         </button>
         <button
           onClick={onBack}
           disabled={busy}
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100"
         >
           Back
         </button>

@@ -16,16 +16,16 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Jobs</h1>
-        <form className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Jobs</h1>
+        <form className="flex w-full flex-wrap gap-2 sm:w-auto">
           <input
             name="q"
             defaultValue={q ?? ""}
             placeholder="Search job, customer, PO, SKU…"
-            className="w-64 rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700"
+            className="w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 sm:w-64 dark:border-zinc-700 dark:focus-visible:outline-zinc-100"
           />
-          <button className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
+          <button className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-100">
             Search
           </button>
           {canExport && <ExportDropdown q={q} />}
@@ -35,15 +35,15 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
       {canEdit && <JobCreateForm />}
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-xs">
           <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
             <tr>
-              <th className="px-4 py-2">Job</th>
-              <th className="px-4 py-2">Customer</th>
-              <th className="px-4 py-2">Print</th>
-              <th className="px-4 py-2">Dispatch</th>
-              <th className="px-4 py-2">Priority</th>
-              <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2 font-semibold">Job</th>
+              <th className="px-4 py-2 font-semibold">Customer</th>
+              <th className="px-4 py-2 font-semibold">Print</th>
+              <th className="px-4 py-2 font-semibold">Dispatch</th>
+              <th className="px-4 py-2 font-semibold">Priority</th>
+              <th className="px-4 py-2 font-semibold">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -64,10 +64,10 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
                 <td className="px-4 py-2">{String(j.customer_name)}</td>
                 <td className="px-4 py-2">{String(j.print_name ?? "—")}</td>
                 <td className="px-4 py-2 font-mono text-xs">{String(j.dispatch_date ?? "—")}</td>
-                <td className="px-4 py-2">{String(j.priority)}</td>
+                <td className="px-4 py-2 font-mono text-xs">{String(j.priority)}</td>
                 <td className="px-4 py-2">
-                  <span className="text-xs text-zinc-500">{String(j.status)}</span>
-                  {j.archived ? <span className="ml-2 text-xs text-zinc-400">archived</span> : null}
+                  <span className="text-xs text-zinc-600 dark:text-zinc-500">{String(j.status)}</span>
+                  {j.archived ? <span className="ml-2 text-xs text-zinc-500">archived</span> : null}
                 </td>
               </tr>
             ))}

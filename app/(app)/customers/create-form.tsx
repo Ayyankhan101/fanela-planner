@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { errorCls, fieldCls, primaryCls } from "../ui";
 
 export function CustomerCreateForm() {
   const router = useRouter();
@@ -43,8 +44,7 @@ export function CustomerCreateForm() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900">
+      <button onClick={() => setOpen(true)} className={primaryCls}>
         New customer
       </button>
     );
@@ -58,13 +58,13 @@ export function CustomerCreateForm() {
         required={key === "name"}
         value={form[key]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700"
+        className={fieldCls}
       />
     </label>
   );
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+    <form onSubmit={submit} className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="grid gap-4 sm:grid-cols-3">
         {field("Name *", "name")}
         {field("Contact", "contactName")}
@@ -76,13 +76,16 @@ export function CustomerCreateForm() {
           Default dispatch address
           <input value={form.defaultDispatchAddress}
             onChange={(e) => setForm({ ...form, defaultDispatchAddress: e.target.value })}
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1.5 text-sm dark:border-zinc-700" />
+            className={fieldCls} />
         </label>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
       <div className="flex gap-3">
-        <button type="submit" disabled={busy}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900">
+        <button type="submit" disabled={busy} className={primaryCls}>
           {busy ? "Creating…" : "Create customer"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="text-sm text-zinc-500 hover:text-zinc-700">Cancel</button>

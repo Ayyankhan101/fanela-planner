@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls, btnCls, primaryCls, send, sectionCls, titleCls } from "../../../ui";
+import { inputCls, btnCls, errorCls, primaryCls, send, sectionCls, titleCls } from "../../../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -105,7 +105,7 @@ export function ArtworkPanel({ jobId, artwork, canArtwork }: { jobId: string; ar
                 disabled={busy !== ""}
                 className={b.primary ? primaryCls : btnCls}
               >
-                {busy === b.act ? "…" : b.label}
+                {busy === b.act ? "Saving…" : b.label}
               </button>
             ))}
             {status === "draft" && (
@@ -122,10 +122,10 @@ export function ArtworkPanel({ jobId, artwork, canArtwork }: { jobId: string; ar
           <h3 className="mb-1 text-xs font-semibold uppercase text-zinc-500">Versions</h3>
           <ul className="space-y-0.5 text-xs">
             {versions.map((v) => (
-              <li key={String(v.id)} className="flex justify-between text-zinc-600 dark:text-zinc-400">
+              <li key={String(v.id)} className="flex justify-between text-zinc-600 dark:text-zinc-500">
                 <span>v{String(v.version)}</span>
                 <span>{STATUS_LABEL[String(v.status)] ?? String(v.status)}</span>
-                <span className="text-zinc-400">{v.approved_at ? String(v.approved_at).slice(0, 10) : ""}</span>
+                <span className="text-zinc-500">{v.approved_at ? String(v.approved_at).slice(0, 10) : ""}</span>
               </li>
             ))}
           </ul>
@@ -146,7 +146,11 @@ export function ArtworkPanel({ jobId, artwork, canArtwork }: { jobId: string; ar
         </div>
       )}
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mt-2">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
     </section>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls, btnCls, send, sectionCls, titleCls } from "../../../ui";
+import { inputCls, btnCls, errorCls, send, sectionCls, titleCls } from "../../../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -88,7 +88,7 @@ export function StagesPanel({ jobId, stages, canStage }: { jobId: string; stages
                         disabled={busy !== ""}
                         className={`${btnCls} !px-2 !py-1 !text-xs`}
                       >
-                        {busy === `${String(s.id)}:${t}` ? "…" : LABEL[t]}
+                        {busy === `${String(s.id)}:${t}` ? "Updating…" : LABEL[t]}
                       </button>
                     ))}
                   </div>
@@ -134,9 +134,13 @@ export function StagesPanel({ jobId, stages, canStage }: { jobId: string; stages
           );
         })}
       </div>
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mt-3">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
       {canStage && (
-        <p className="mt-3 text-xs text-zinc-400">
+        <p className="mt-3 text-xs text-zinc-500">
           Department operators can update their own stage; Admin/Operations can update any.
         </p>
       )}
