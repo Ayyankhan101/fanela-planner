@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.5] - 2026-10-06
+
+### Added
+- **Error-contract F1/F2 (PR #14):** `lib/errors.ts` +15 `MSG_*`; ~20 routes zod-fail → 422 `{error:"Invalid request.", code:"validation_error"}` (no raw zod output); domain 404/409/422/401/403 tagged with taxonomy codes; services (jobs/artwork/readiness/stages/dispatch/stock/swatch) throw coded `{status, message, code}`; `audit-table.tsx` ENTITY_TYPES fixed (dropped dead `stock`/`import`); new `tests/error-contract-probe.test.ts` (+10 tests). Live curl verified: `validation_error`, `invalid_credentials`, `customer_not_found`, `job_not_found`, `forbidden_admin_ops`. Suite **440/440**
+- **Prod deploy + monitoring (PR #15):** `ops/launchd/` — `com.fanela.app` + `com.fanela.outbox` (KeepAlive), nightly backup 01:30, L4 integrity 02:00, storage sweep 03:00, uptime probe 5 min; `scripts/uptime-probe.sh` success-logging (`fanela up: HTTP 200` → `logs/uptime.out.log`); runbook §1 job table + install loop, §4c outbox supervision, §6 probe logging + monitoring clock; drill log PROD LIVE 2026-10-06; `./scripts/deploy.sh` executed full path. **Monitoring clock: ≥5 working days clean-probe from 2026-10-06** (cutover gate-in prerequisite)
+- C6 rule-ID coverage meta-test: `tests/rule-coverage.test.ts` (all 77 register IDs; EXCEPTIONS {D6 — no as-built total-prints surface}) + D5 delta test + D9/G5 tag cleanup (PR #13)
+- P5 domain-event emission groundwork (PR #13): `lib/services/emit.ts` — `audit()` + `appendStockEvent()` write frozen-envelope outbox rows (`kind` = event name, zod-validated, ambient-tx; `tests/domain-emission.test.ts`); sender registry empty → rows wait `pending`/`attempts=0` by design; DPD/Xero senders + `dpd|xero` routing land with D1–D6/X1–X5
+- Production UX pass (PR #13): tokens/typography/contrast/focus-rings/inline-confirms/aria-live/mobile nav+search wrap; evidence `designs/ux-pass-20261005/`
+- C5 operator demo checklist (`docs/ops/c5-demo-checklist.md`) + facilitator dry-run: 14-step flow PASS on `DEMO-C5-001`, 4 findings → QA loop
+- QA loop fixes (Phase C, report 94/100): ISSUE-001 customers pagination, ISSUE-002 picker combobox, ISSUE-003 swatch approve reason, ISSUE-004 audit job-number filter — each with regression test
+- **Catch-up (prior undocumented work):** outbox worker groundwork (pg-boss v12 + 15 s `outbox-tick`, migration `0005`, `lib/services/outbox.ts` CAS claim/backoff/retry, admin retry endpoint, `tests/outbox.test.ts` 10); audit log UI (`/audit`, nav link); interactive job-detail panels; manual light/dark mode toggle; `scripts/deploy.sh` + `scripts/add-user.mts` (`npm run user:add`); `AUTH_COOKIE_SECURE` LAN opt-out
+
+### Changed
+- `CLAUDE.md` conventions: services throw taxonomy-coded `{status, message, code}`; route-edge parse failures → `err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR)`
+- `docs/phase0/08` status log: 2026-10-06 rows (C6/P5/UX merged PR #13; QA + error contract PR #14 + prod deploy PR #15)
+- `docs/ops/c5-demo-checklist.md`: box-live preconditions annotated 2026-10-06; dry-run findings marked fixed; step 13 wording (job number or UUID)
+- Runbook §7 CI test count 378 → 440; README npm-scripts table + ops docs-map rows
+
+### Fixed
+- ISSUE-001: `/customers` paginates (50/page + pager) — `abf5d1e`, CI-robust test `f9ba67e`
+- ISSUE-002: job-create customer picker = filterable combobox — `ef8fd11`
+- ISSUE-003: swatch approve no longer requires a reason (reject/re-swatch still 422) — `3a59679`, test `e33c8ef`
+- ISSUE-004: audit filter accepts job number + UUID prefix — `5016baa`, test `c957d18`
+
 ## [0.2.4] - 2026-10-05
 
 ### Changed

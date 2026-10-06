@@ -221,7 +221,7 @@ working days from first clean probe day through the ≥5 wd floor.
 ## 7. First red is blocker (native R10)
 
 Every push runs `.github/workflows/ci.yml` (lint, `next typegen`+`tsc`,
-378 tests, fresh postgres). **First red on `main` = drop-what-you're-doing**;
+440 tests, fresh postgres). **First red on `main` = drop-what-you're-doing**;
 fix-forward before merging anything else. Never "merge over" red CI.
 
 ## 8. Storage (E5) — MinIO/S3 checkpoint

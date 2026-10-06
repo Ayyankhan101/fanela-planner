@@ -22,6 +22,8 @@ Open items discovered during development. Checked = done.
 
 **Recorded 2026-10-03 (C5):** operator = **project owner (client) — solo run**; flow = job-create → dispatch through the P3 screen; half-day max (P3 closed 2026-10-03). **Date booked 2026-10-05: 2026-10-10.** Status: booked (entry closes when the run is accepted).
 
+**Status (2026-10-06):** dry-run findings (4: pagination, picker combobox, swatch approve reason, audit UUID-only filter) **all fixed** in QA loop — see `docs/ops/c5-demo-checklist.md` findings table. Box-live precondition verified 2026-10-06 (PR #15); nightly restore point first prod run 2026-10-07 01:30 — re-verify day-before (2026-10-09).
+
 **What:** One named operator runs job-create → dispatch through the P3 screen (half-day max); schedule at P3 close.
 
 **Why:** Adoption loop (native CEO 3.3/R3) — 77 rules green with zero operators is the top 6-month regret scenario. Spec-conformance is not proof of value.
@@ -70,6 +72,14 @@ Open items discovered during development. Checked = done.
 - **Rollback:** legacy stays read-only-able until 5 working days post-shutdown; any failed daily reconciliation for 2 consecutive days reopens dual entry.
 
 ## Completed
+
+### Error-contract F1/F2 — CLOSED 2026-10-06
+
+**Closure record:** PR #14 (`4c11c76`): `lib/errors.ts` +15 `MSG_*`; ~20 routes zod-fail → 422 `{error:"Invalid request.", code:"validation_error"}` (no raw zod output); domain 404/409/422/401/403 tagged with taxonomy codes; services (jobs/artwork/readiness/stages/dispatch/stock/swatch) throw coded `{status,message,code}`; `audit-table.tsx` ENTITY_TYPES fixed (dropped dead `stock`/`import`); new `tests/error-contract-probe.test.ts` (+10 tests). Live curl verified: `validation_error`, `invalid_credentials`, `customer_not_found`, `job_not_found`, `forbidden_admin_ops`. Suite 440/440, CI green. Known residual: duplicate job-number / PK-clash 409s stay message-only (documented README + CLAUDE.md).
+
+### Prod deploy + monitoring live — CLOSED 2026-10-06
+
+**Closure record:** PR #15 (`d60f3db`): `ops/launchd/` — `com.fanela.app` + `com.fanela.outbox` (KeepAlive), nightly backup 01:30, L4 integrity 02:00, storage sweep 03:00, uptime probe 5 min; `uptime-probe.sh` success-logging (`logs/uptime.out.log`); runbook §1 job table + install loop, §4c outbox supervision, §6 probe logging + monitoring clock; drill log PROD LIVE 2026-10-06; `deploy.sh` executed full path (build → migrate → security → kickstart); probe verified `fanela up: HTTP 200`; L4 `bad_privs=0 orphans=0`. **Monitoring clock: ≥5 working days clean-probe from 2026-10-06** (cutover gate-in prerequisite). First nightly dump → first restore drill follow-up (re-verify before C5, 2026-10-09).
 
 ### Prod-ops runbook before go-live — CLOSED 2026-10-04
 
