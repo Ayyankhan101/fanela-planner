@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { patchAttempt } from "@/lib/services/swatch";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string; attemptId: string }> };
 
@@ -29,7 +30,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id, attemptId } = await params;
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid attempt update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   try {
     const next = await patchAttempt(id, attemptId, parsed.data, auth.user);
     return NextResponse.json({ ok: true, version: next });

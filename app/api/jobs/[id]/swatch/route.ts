@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { setSwatchRequirement } from "@/lib/services/swatch";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,7 +19,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid requirement update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   try {
     await setSwatchRequirement(id, parsed.data.required, parsed.data.reason, auth.user);
     return NextResponse.json({ ok: true });

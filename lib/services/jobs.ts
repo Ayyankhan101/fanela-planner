@@ -4,6 +4,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/access";
 import { audit } from "./audit";
 import { appendStockEvent, stockOverview } from "./stock";
+import { CODE_FORBIDDEN, CODE_JOB_NOT_FOUND, CODE_CUSTOMER_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 import { computeReadiness, updateReadinessCache } from "./readiness";
 
 export type CreateJobInput = {
@@ -43,8 +44,8 @@ export async function createJob(input: CreateJobInput, user: SessionUser): Promi
        FROM customers WHERE id = $1 AND active = true`,
     [input.customerId],
   );
-  if (!cust[0]) throw { status: 422, message: "Customer not found." };
-  if (!input.lines.length) throw { status: 422, message: "At least one product line required." };
+  if (!cust[0]) throw { status: 422, message: "Customer not found.", code: CODE_CUSTOMER_NOT_FOUND };
+  if (!input.lines.length) throw { status: 422, message: "At least one product line required.", code: CODE_VALIDATION_ERROR };
 
   const jobId = randomUUID();
   try {
@@ -92,7 +93,7 @@ export async function createJob(input: CreateJobInput, user: SessionUser): Promi
     }
     lineCount++;
   }
-  if (!lineCount) throw { status: 422, message: "At least one line needs an SKU." };
+  if (!lineCount) throw { status: 422, message: "At least one line needs an SKU.", code: CODE_VALIDATION_ERROR };
 
   for (const p of input.positions ?? []) {
     if (p.name.trim()) {
@@ -219,16 +220,16 @@ export type PatchJobInput = Partial<{
 
 export async function patchJob(id: string, input: PatchJobInput, version: number, user: SessionUser): Promise<void> {
   const before = await query<Record<string, unknown>>(`SELECT * FROM jobs WHERE id = $1 FOR UPDATE`, [id]);
-  if (!before[0]) throw { status: 404, message: "Job not found." };
+  if (!before[0]) throw { status: 404, message: "Job not found.", code: CODE_JOB_NOT_FOUND };
   if (Number(before[0].version) !== version) {
-    throw { status: 409, message: "Job changed since you loaded it. Reload and retry.", current: before[0] };
+    throw { status: 409, message: "Job changed since you loaded it. Reload and retry.", current: before[0], code: CODE_STALE_JOB };
   }
   const allowed: (keyof PatchJobInput)[] = [
     "po", "printName", "orderDate", "orderType", "priority", "staff",
     "processDate", "dispatchDate", "dispatchTime", "notes",
   ];
   if (input.archived === true && !user.roles.includes("admin") && !user.roles.includes("ops")) {
-    throw { status: 403, message: "Archive requires Admin or Operations." };
+    throw { status: 403, message: "Archive requires Admin or Operations.", code: CODE_FORBIDDEN };
   }
   const COLS: Record<string, string> = {
     po: "po",
@@ -263,7 +264,7 @@ export async function patchJob(id: string, input: PatchJobInput, version: number
   );
   if (!res.length) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM jobs WHERE id = $1`, [id]);
-    throw { status: 409, message: "Job changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Job changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
 
   // L5: archiving writes stock-history event — history survives record removal
@@ -284,10 +285,10 @@ export async function patchJob(id: string, input: PatchJobInput, version: number
 // Lifecycle: cancel keeps the record (status only, 03 §1)
 export async function cancelJob(id: string, reason: string, user: SessionUser): Promise<void> {
   const before = await query<Record<string, unknown>>(`SELECT status FROM jobs WHERE id = $1 FOR UPDATE`, [id]);
-  if (!before[0]) throw { status: 404, message: "Job not found." };
-  if (before[0].status === "cancelled") throw { status: 422, message: "Job already cancelled." };
-  if (before[0].status === "completed") throw { status: 422, message: "Completed jobs cannot be cancelled." };
-  if (!reason?.trim()) throw { status: 422, message: "Cancellation requires a reason." };
+  if (!before[0]) throw { status: 404, message: "Job not found.", code: CODE_JOB_NOT_FOUND };
+  if (before[0].status === "cancelled") throw { status: 422, message: "Job already cancelled.", code: CODE_VALIDATION_ERROR };
+  if (before[0].status === "completed") throw { status: 422, message: "Completed jobs cannot be cancelled.", code: CODE_VALIDATION_ERROR };
+  if (!reason?.trim()) throw { status: 422, message: "Cancellation requires a reason.", code: CODE_VALIDATION_ERROR };
   await query(`UPDATE jobs SET status = 'cancelled', updated_at = now() WHERE id = $1`, [id]);
   await audit({
     entityType: "job", entityId: id, jobId: id, action: "job-header", user,

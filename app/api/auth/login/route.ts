@@ -7,7 +7,7 @@ import { loginBlocked, recordLogin } from "@/lib/auth/rate-limit";
 import { cookieSecure, createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
 import { clientIp, err } from "@/lib/http";
 import { MFA_COOKIE, MFA_TTL_MS, MFA_MANDATORY_ROLES } from "@/lib/auth/mfa";
-import { MSG_INVALID_REQUEST, CODE_INVALID_REQUEST } from "@/lib/errors";
+import { MSG_INVALID_REQUEST, CODE_INVALID_REQUEST, MSG_INVALID_CREDENTIALS, CODE_INVALID_CREDENTIALS, MSG_LOGIN_BLOCKED, CODE_RATE_LIMITED } from "@/lib/errors";
 
 const body = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const email = parsed.data.email.toLowerCase();
 
   const blocked = await loginBlocked(email, ip);
-  if (blocked) return err(429, "Too many attempts. Try again later.");
+  if (blocked) return err(429, MSG_LOGIN_BLOCKED, CODE_RATE_LIMITED);
 
   const users = await query<{
     id: string;
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   if (!ok || !user || !user.active) {
     await recordLogin(email, ip, false);
-    return err(401, "Invalid email or password.");
+    return err(401, MSG_INVALID_CREDENTIALS, CODE_INVALID_CREDENTIALS);
   }
 
   if (user.totp_secret) {

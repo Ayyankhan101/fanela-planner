@@ -7,6 +7,16 @@ import { createSession, readCookie, SESSION_COOKIE, sessionCookieOptions } from 
 import { clientIp, err } from "@/lib/http";
 import { MFA_COOKIE } from "@/lib/auth/mfa";
 import { matchRecoveryCode } from "@/lib/auth/recovery";
+import {
+  MSG_INVALID_REQUEST,
+  CODE_VALIDATION_ERROR,
+  MSG_MFA_STEP_EXPIRED,
+  CODE_MFA_STEP_EXPIRED,
+  MSG_MFA_INVALID_CODE,
+  CODE_MFA_INVALID_CODE,
+  MSG_MFA_INVALID_RECOVERY_CODE,
+  CODE_MFA_INVALID_RECOVERY_CODE,
+} from "@/lib/errors";
 
 const body = z
   .object({
@@ -20,7 +30,7 @@ const body = z
 export async function POST(req: Request) {
   const ip = clientIp(req);
   const pendingId = readCookie(req, MFA_COOKIE);
-  if (!pendingId) return err(401, "MFA step expired. Sign in again.");
+  if (!pendingId) return err(401, MSG_MFA_STEP_EXPIRED, CODE_MFA_STEP_EXPIRED);
 
   const pending = await query<{
     user_id: string;
@@ -34,22 +44,22 @@ export async function POST(req: Request) {
     [pendingId],
   );
   const row = pending[0];
-  if (!row || !row.totp_secret) return err(401, "MFA step expired. Sign in again.");
+  if (!row || !row.totp_secret) return err(401, MSG_MFA_STEP_EXPIRED, CODE_MFA_STEP_EXPIRED);
 
   const parsed = body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(400, parsed.error.issues[0]?.message ?? "Enter the 6-digit code.");
+  if (!parsed.success) return err(400, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
 
   if (parsed.data.recovery) {
     const rest = matchRecoveryCode(row.recovery_codes, parsed.data.recovery);
     if (!rest) {
       await recordLogin(row.email, ip, false);
-      return err(401, "Invalid recovery code.");
+      return err(401, MSG_MFA_INVALID_RECOVERY_CODE, CODE_MFA_INVALID_RECOVERY_CODE);
     }
     await query(`UPDATE users SET recovery_codes = $2 WHERE id = $1`, [row.user_id, rest]);
   } else {
     if (!verifyTotp(row.totp_secret, parsed.data.token!)) {
       await recordLogin(row.email, ip, false);
-      return err(401, "Invalid code.");
+      return err(401, MSG_MFA_INVALID_CODE, CODE_MFA_INVALID_CODE);
     }
   }
 

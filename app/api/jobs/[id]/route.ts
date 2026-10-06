@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { getJob, patchJob } from "@/lib/services/jobs";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR, MSG_JOB_NOT_FOUND, CODE_JOB_NOT_FOUND } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,7 +11,7 @@ export async function GET(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const job = await getJob(id, auth.user);
-  if (!job) return err(404, "Job not found.");
+  if (!job) return err(404, MSG_JOB_NOT_FOUND, CODE_JOB_NOT_FOUND);
   return NextResponse.json({ job });
 }
 
@@ -36,7 +37,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const { version, ...input } = parsed.data;
   try {
     await patchJob(id, input, version, auth.user);

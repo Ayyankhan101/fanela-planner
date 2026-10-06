@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { patchStage } from "@/lib/services/stages";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string; stageId: string }> };
 
@@ -22,7 +23,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id, stageId } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid stage update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const { version, ...input } = parsed.data;
   try {
     const next = await patchStage(id, stageId, input, version, auth.user);

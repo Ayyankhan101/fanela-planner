@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { patchScreens } from "@/lib/services/readiness";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,7 +22,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid screens update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const { version, ...input } = parsed.data;
   try {
     const next = await patchScreens(id, { ...input, version }, auth.user);
