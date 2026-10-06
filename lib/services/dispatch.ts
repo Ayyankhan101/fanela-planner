@@ -3,6 +3,7 @@ import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "./audit";
 import { refreshJobStatus } from "./stages";
+import { CODE_JOB_NOT_FOUND, CODE_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 // Dispatch & shipments (P1–P9): explicit lifecycle, void-not-delete, explicit finalise (P5).
 
@@ -36,10 +37,10 @@ export async function createShipment(
   user: SessionUser,
 ): Promise<{ id: string; version: number }> {
   if (!DISPATCH_METHODS.includes(input.method as never)) {
-    throw { status: 422, message: `Unknown dispatch method: ${input.method}.` };
+    throw { status: 422, message: `Unknown dispatch method: ${input.method}.`, code: CODE_VALIDATION_ERROR };
   }
   const job = await query(`SELECT id FROM jobs WHERE id = $1`, [jobId]);
-  if (!job[0]) throw { status: 404, message: "Job not found." };
+  if (!job[0]) throw { status: 404, message: "Job not found.", code: CODE_JOB_NOT_FOUND };
   const id = randomUUID();
   const ins = await query<{ id: string; version: number }>(
     `INSERT INTO shipments (id, job_id, method, status, parcels, consignment, tracking, created_by)
@@ -78,13 +79,13 @@ async function patchShipmentTx(shipmentId: string, input: ShipmentPatchInput, us
     voided: boolean;
   }>(`SELECT id, job_id, status, method, version, voided FROM shipments WHERE id = $1 FOR UPDATE`, [shipmentId]);
   const cur = lock[0];
-  if (!cur) throw { status: 404, message: "Shipment not found." };
+  if (!cur) throw { status: 404, message: "Shipment not found.", code: CODE_NOT_FOUND };
   if (Number(cur.version) !== input.version) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM shipments WHERE id = $1`, [shipmentId]);
-    throw { status: 409, message: "Shipment changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Shipment changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
   if (cur.voided || cur.status === "void") {
-    throw { status: 422, message: "Void shipments are fixed. Create a new shipment." };
+    throw { status: 422, message: "Void shipments are fixed. Create a new shipment.", code: CODE_VALIDATION_ERROR };
   }
 
   const p: unknown[] = [shipmentId, input.version];
@@ -94,7 +95,7 @@ async function patchShipmentTx(shipmentId: string, input: ShipmentPatchInput, us
   };
   const sets: string[] = [];
   if (input.method !== undefined) {
-    if (!DISPATCH_METHODS.includes(input.method as never)) throw { status: 422, message: `Unknown dispatch method: ${input.method}.` };
+    if (!DISPATCH_METHODS.includes(input.method as never)) throw { status: 422, message: `Unknown dispatch method: ${input.method}.`, code: CODE_VALIDATION_ERROR };
     sets.push(set("method", input.method));
   }
   if (input.parcels !== undefined) sets.push(set("parcels", input.parcels));
@@ -106,19 +107,19 @@ async function patchShipmentTx(shipmentId: string, input: ShipmentPatchInput, us
     const target = input.status;
     if (target === "void") {
       // P7: void = event with reason; row never deleted
-      if (!input.reason?.trim()) throw { status: 422, message: "Voiding a shipment requires a reason." };
+      if (!input.reason?.trim()) throw { status: 422, message: "Voiding a shipment requires a reason.", code: CODE_VALIDATION_ERROR };
       sets.push(set("status", "void"));
       sets.push(set("voided", true));
       sets.push(set("void_reason", input.reason));
       transitioned = "void";
     } else {
       if (!SHIPMENT_FLOW[cur.status]?.includes(target)) {
-        throw { status: 422, message: `Invalid shipment transition: ${cur.status} → ${target}.` };
+        throw { status: 422, message: `Invalid shipment transition: ${cur.status} → ${target}.`, code: CODE_VALIDATION_ERROR };
       }
       if (FINAL_STATES.includes(target)) {
         const method = input.method ?? cur.method;
         if (method === "Collection" && !input.confirmCollection) {
-          throw { status: 422, message: "Collection requires confirmation before final dispatch." };
+          throw { status: 422, message: "Collection requires confirmation before final dispatch.", code: CODE_VALIDATION_ERROR };
         }
         sets.push(set("final_at", new Date().toISOString()));
         sets.push(set("finalized_by", user.id));
@@ -145,7 +146,7 @@ async function patchShipmentTx(shipmentId: string, input: ShipmentPatchInput, us
   );
   if (!res.length) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM shipments WHERE id = $1`, [shipmentId]);
-    throw { status: 409, message: "Shipment changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Shipment changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
   const after = await query(`SELECT * FROM shipments WHERE id = $1`, [shipmentId]);
 
@@ -170,7 +171,7 @@ export async function finaliseDispatch(
   user: SessionUser,
 ): Promise<void> {
   const job = await query<{ status: string }>(`SELECT status FROM jobs WHERE id = $1 FOR UPDATE`, [jobId]);
-  if (!job[0]) throw { status: 404, message: "Job not found." };
+  if (!job[0]) throw { status: 404, message: "Job not found.", code: CODE_JOB_NOT_FOUND };
 
   const stage = await query<{ id: string; status: string; version: number }>(
     `SELECT s.id, s.status, s.version FROM job_stages s JOIN departments d ON d.id = s.department_id
@@ -178,9 +179,9 @@ export async function finaliseDispatch(
     [jobId],
   );
   const dispatchStage = stage[0];
-  if (!dispatchStage) throw { status: 422, message: "Job has no dispatch stage." };
+  if (!dispatchStage) throw { status: 422, message: "Job has no dispatch stage.", code: CODE_VALIDATION_ERROR };
   if (dispatchStage.status === "completed") {
-    throw { status: 422, message: "Dispatch stage already finalised." };
+    throw { status: 422, message: "Dispatch stage already finalised.", code: CODE_VALIDATION_ERROR };
   }
 
   const notDone = await query<{ keys: string }>(
@@ -189,7 +190,7 @@ export async function finaliseDispatch(
     [jobId],
   );
   if (notDone[0]?.keys) {
-    throw { status: 422, message: `Other departments unfinished: ${notDone[0].keys}.` };
+    throw { status: 422, message: `Other departments unfinished: ${notDone[0].keys}.`, code: CODE_VALIDATION_ERROR };
   }
 
   const shipments = await query<{ id: string; status: string; voided: boolean }>(
@@ -204,7 +205,7 @@ export async function finaliseDispatch(
         message: "Every shipment must be final (Dispatched/Collected) or Void before finalising. Abandon with reason to void remaining bookings.",
       };
     }
-    if (!input.reason?.trim()) throw { status: 422, message: "Abandon requires a reason." };
+    if (!input.reason?.trim()) throw { status: 422, message: "Abandon requires a reason.", code: CODE_VALIDATION_ERROR };
     for (const s of pending) {
       await query(`UPDATE shipments SET status = 'void', voided = true, void_reason = $1, version = version + 1 WHERE id = $2`, [
         `Abandoned at finalise: ${input.reason}`,
@@ -216,7 +217,7 @@ export async function finaliseDispatch(
   if (!shipments.filter((s) => !s.voided).length && shipments.length > 0) {
     // all void — allowed (nothing to ship), but must be deliberate: same abandon reason path
     if (!input.abandon) {
-      throw { status: 422, message: "No final shipment recorded. Confirm abandon to close with zero live bookings." };
+      throw { status: 422, message: "No final shipment recorded. Confirm abandon to close with zero live bookings.", code: CODE_VALIDATION_ERROR };
     }
   }
 
@@ -227,7 +228,7 @@ export async function finaliseDispatch(
       WHERE id = $3 AND status <> 'completed' RETURNING 'x' AS n`,
     [now, user.id, dispatchStage.id],
   );
-  if (!res.length) throw { status: 409, message: "Dispatch stage changed since you loaded it. Reload and retry." };
+  if (!res.length) throw { status: 409, message: "Dispatch stage changed since you loaded it. Reload and retry.", code: CODE_STALE_JOB };
 
   await audit({
     entityType: "stage",

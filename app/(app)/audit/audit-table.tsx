@@ -5,7 +5,7 @@ import { btnCls, errorCls, inputCls, primaryCls, sectionCls, titleCls } from "..
 
 type Rec = Record<string, unknown>;
 
-const ENTITY_TYPES = ["job", "customer", "artwork", "swatch", "stage", "shipment", "stock", "import"] as const;
+const ENTITY_TYPES = ["job", "jobs", "customer", "artwork", "swatch", "stage", "shipment", "screens", "job_lines"] as const;
 
 export function AuditTable() {
   const [events, setEvents] = useState<Rec[]>([]);

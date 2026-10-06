@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "./audit";
+import { CODE_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 // Readiness traffic light — server-computed only (G1), never client-settable.
 export type GateState = { active: boolean; pass: boolean };
@@ -110,9 +111,9 @@ export async function patchScreens(jobId: string, input: ScreensPatchInput, user
     `SELECT version FROM screen_records WHERE job_id = $1 FOR UPDATE`,
     [jobId],
   );
-  if (!lock[0]) throw { status: 404, message: "Screen record not found." };
+  if (!lock[0]) throw { status: 404, message: "Screen record not found.", code: CODE_NOT_FOUND };
   if (Number(lock[0].version) !== input.version) {
-    throw { status: 409, message: "Screen record changed since you loaded it. Reload and retry." };
+    throw { status: 409, message: "Screen record changed since you loaded it. Reload and retry.", code: CODE_STALE_JOB };
   }
 
   const cur = await query<Record<string, unknown>>(`SELECT * FROM screen_records WHERE job_id = $1`, [jobId]);
@@ -129,10 +130,10 @@ export async function patchScreens(jobId: string, input: ScreensPatchInput, user
 
   if (!notRequired) {
     if (required != null && made != null && made > required) {
-      throw { status: 422, message: "Screen counts must match before confirming all screens." };
+      throw { status: 422, message: "Screen counts must match before confirming all screens.", code: CODE_VALIDATION_ERROR };
     }
     if (confirmed && !(required != null && required > 0 && made === required)) {
-      throw { status: 422, message: "Screen counts must match before confirming all screens." };
+      throw { status: 422, message: "Screen counts must match before confirming all screens.", code: CODE_VALIDATION_ERROR };
     }
   }
 
@@ -150,7 +151,7 @@ export async function patchScreens(jobId: string, input: ScreensPatchInput, user
       input.version,
     ],
   );
-  if (!res.length) throw { status: 409, message: "Screen record changed since you loaded it. Reload and retry." };
+  if (!res.length) throw { status: 409, message: "Screen record changed since you loaded it. Reload and retry.", code: CODE_STALE_JOB };
 
   const after = await query(`SELECT * FROM screen_records WHERE job_id = $1`, [jobId]);
   await audit({

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { createJob, listJobs } from "@/lib/services/jobs";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 export async function GET(req: Request) {
   const auth = await requirePermission("jobs.view", { req });
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
   const auth = await requirePermission("jobs.edit", { req });
   if ("error" in auth) return auth.error;
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid job.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   try {
     const id = await createJob(parsed.data, auth.user);
     return NextResponse.json({ id }, { status: 201 });

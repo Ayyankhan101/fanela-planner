@@ -3,6 +3,16 @@ import { z } from "zod";
 import { query } from "@/lib/db";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { audit } from "@/lib/services/audit";
+import {
+  MSG_INVALID_REQUEST,
+  CODE_VALIDATION_ERROR,
+  MSG_CONFIRM_REQUIRED,
+  CODE_CONFIRM_REQUIRED,
+  MSG_NOTHING_TO_UPDATE,
+  CODE_NOTHING_TO_UPDATE,
+  MSG_CUSTOMER_NOT_FOUND,
+  CODE_CUSTOMER_NOT_FOUND,
+} from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -40,14 +50,14 @@ export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params;
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const { confirm, ...input } = parsed.data;
-  if (!confirm) return err(422, "Confirmation required.");
-  if (!Object.keys(input).length) return err(422, "Nothing to update.");
+  if (!confirm) return err(422, MSG_CONFIRM_REQUIRED, CODE_CONFIRM_REQUIRED);
+  if (!Object.keys(input).length) return err(422, MSG_NOTHING_TO_UPDATE, CODE_NOTHING_TO_UPDATE);
 
   try {
     const before = await query<Record<string, unknown>>(`SELECT * FROM customers WHERE id = $1`, [id]);
-    if (!before[0]) return err(404, "Customer not found.");
+    if (!before[0]) return err(404, MSG_CUSTOMER_NOT_FOUND, CODE_CUSTOMER_NOT_FOUND);
 
     const sets: string[] = [];
     const vals: unknown[] = [id];

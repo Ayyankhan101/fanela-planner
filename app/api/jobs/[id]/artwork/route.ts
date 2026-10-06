@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { getArtwork, patchArtwork } from "@/lib/services/artwork";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR, MSG_JOB_NOT_FOUND, CODE_JOB_NOT_FOUND } from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,7 +11,7 @@ export async function GET(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const artwork = await getArtwork(id, auth.user);
-  if (!artwork) return err(404, "Job not found.");
+  if (!artwork) return err(404, MSG_JOB_NOT_FOUND, CODE_JOB_NOT_FOUND);
   return NextResponse.json({ artwork });
 }
 
@@ -29,7 +30,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid artwork update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   try {
     const next = await patchArtwork(id, parsed.data, auth.user);
     return NextResponse.json({ ok: true, version: next });

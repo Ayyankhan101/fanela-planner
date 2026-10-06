@@ -3,7 +3,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/access";
 import type { DepartmentKey } from "@/lib/permissions";
 import { audit } from "./audit";
-import { CODE_FORBIDDEN } from "@/lib/errors";
+import { CODE_FORBIDDEN, CODE_JOB_NOT_FOUND, CODE_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 // Department work & stages (D1–D10). Invalid transition → 422; stale version → 409.
 
@@ -102,10 +102,10 @@ async function patchStageTx(
   user: SessionUser,
 ): Promise<number> {
   const job = await query<{ status: string }>(`SELECT status FROM jobs WHERE id = $1 FOR UPDATE`, [jobId]);
-  if (!job[0]) throw { status: 404, message: "Job not found." };
+  if (!job[0]) throw { status: 404, message: "Job not found.", code: CODE_JOB_NOT_FOUND };
 
   const s = await loadStage(jobId, stageId);
-  if (!s) throw { status: 404, message: "Stage not found." };
+  if (!s) throw { status: 404, message: "Stage not found.", code: CODE_NOT_FOUND };
 
   // D3: operator own department only; Admin/Ops override
   if (!can(user, "stage.update", { department: s.dept_key as DepartmentKey })) {
@@ -113,7 +113,7 @@ async function patchStageTx(
   }
   if (Number(s.version) !== version) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM job_stages WHERE id = $1`, [stageId]);
-    throw { status: 409, message: "Stage changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Stage changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
 
   const before = await query<Record<string, unknown>>(
@@ -123,13 +123,13 @@ async function patchStageTx(
 
   const target = input.status ?? s.status;
   if (target !== s.status && !TRANSITIONS[s.status]?.includes(target)) {
-    throw { status: 422, message: `Invalid stage transition: ${s.status} → ${target}.` };
+    throw { status: 422, message: `Invalid stage transition: ${s.status} → ${target}.`, code: CODE_VALIDATION_ERROR };
   }
   if (job[0].status === "cancelled") {
-    throw { status: 422, message: "Cancelled jobs cannot be worked on." };
+    throw { status: 422, message: "Cancelled jobs cannot be worked on.", code: CODE_VALIDATION_ERROR };
   }
   if (job[0].status === "completed" && target !== s.status) {
-    throw { status: 422, message: "Completed jobs cannot be reopened." };
+    throw { status: 422, message: "Completed jobs cannot be reopened.", code: CODE_VALIDATION_ERROR };
   }
 
   // S7 gate: any Embroidery production move blocked until swatch approved
@@ -204,7 +204,7 @@ async function patchStageTx(
   );
   if (!res.length) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM job_stages WHERE id = $1`, [stageId]);
-    throw { status: 409, message: "Stage changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Stage changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
 
   const after = await query<Record<string, unknown>>(`SELECT * FROM job_stages WHERE id = $1`, [stageId]);

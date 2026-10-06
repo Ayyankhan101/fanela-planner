@@ -3,6 +3,7 @@ import { z } from "zod";
 import { query } from "@/lib/db";
 import { requirePermission, err } from "@/lib/http";
 import { audit } from "@/lib/services/audit";
+import { MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 export async function GET(req: Request) {
   const auth = await requirePermission("customers.view", { req });
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
   const auth = await requirePermission("customers.edit", { req });
   if ("error" in auth) return auth.error;
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid customer.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const rows = await query<{ id: string }>(
     `INSERT INTO customers (name, contact_name, email, phone, billing_address, default_dispatch_address,
                             default_dispatch_method, account_ref, notes)

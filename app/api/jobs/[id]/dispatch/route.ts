@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, err, toResponse } from "@/lib/http";
-import { MSG_FORBIDDEN, CODE_FORBIDDEN } from "@/lib/errors";
+import {
+  MSG_FORBIDDEN,
+  CODE_FORBIDDEN,
+  MSG_INVALID_REQUEST,
+  CODE_VALIDATION_ERROR,
+  MSG_DISPATCH_PLAN_NOT_FOUND,
+  CODE_DISPATCH_PLAN_NOT_FOUND,
+  MSG_JOB_NOT_FOUND,
+  CODE_JOB_NOT_FOUND,
+  MSG_STALE_JOB,
+  CODE_STALE_JOB,
+} from "@/lib/errors";
 import { query } from "@/lib/db";
 import { hasPermission } from "@/lib/auth/access";
 import { audit } from "@/lib/services/audit";
@@ -26,16 +37,16 @@ export async function PATCH(req: Request, { params }: Params) {
   }
   const { id } = await params;
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid dispatch plan update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const { version, ...input } = parsed.data;
 
   try {
     const before = await query(`SELECT * FROM job_dispatch_snapshot WHERE job_id = $1 FOR UPDATE`, [id]);
-    if (!before[0]) return err(404, "Dispatch plan not found.");
+    if (!before[0]) return err(404, MSG_DISPATCH_PLAN_NOT_FOUND, CODE_DISPATCH_PLAN_NOT_FOUND);
     const job = await query<{ version: number }>(`SELECT version FROM jobs WHERE id = $1`, [id]);
-    if (!job[0]) return err(404, "Job not found.");
+    if (!job[0]) return err(404, MSG_JOB_NOT_FOUND, CODE_JOB_NOT_FOUND);
     if (Number(job[0].version) !== version) {
-      return err(409, "Job changed since you loaded it. Reload and retry.");
+      return err(409, MSG_STALE_JOB, CODE_STALE_JOB);
     }
     const p: unknown[] = [id];
     const sets: string[] = [];

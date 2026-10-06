@@ -3,6 +3,7 @@ import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { updateReadinessCache, STOCK_ISSUES } from "./readiness";
 import { enqueueDomainEvent } from "./emit";
+import { CODE_FORBIDDEN, CODE_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 // Stock history append-only (L1): app role INSERT+SELECT only; events always win.
 // Every stock event also emits a stock.<type> domain-event outbox row (emit.ts).
@@ -203,20 +204,20 @@ async function patchStockLineTx(
     `SELECT version FROM job_lines WHERE id = $1 AND job_id = $2 FOR UPDATE`,
     [lineId, jobId],
   );
-  if (!lock[0]) throw { status: 404, message: "Stock line not found." };
+  if (!lock[0]) throw { status: 404, message: "Stock line not found.", code: CODE_NOT_FOUND };
   if (Number(lock[0].version) !== version) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM job_lines WHERE id = $1`, [lineId]);
-    throw { status: 409, message: "Stock line changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Stock line changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
   if (input.stockIssue != null && !STOCK_ISSUES.includes(input.stockIssue as (typeof STOCK_ISSUES)[number])) {
-    throw { status: 422, message: "Unknown stock issue state." };
+    throw { status: 422, message: "Unknown stock issue state.", code: CODE_VALIDATION_ERROR };
   }
   if (input.correction && !user.roles.includes("admin") && !user.roles.includes("ops")) {
-    throw { status: 403, message: "Corrections require Admin or Operations." };
+    throw { status: 403, message: "Corrections require Admin or Operations.", code: CODE_FORBIDDEN };
   }
 
   const before = await lineSnapshot(lineId);
-  if (!before) throw { status: 404, message: "Stock line not found." };
+  if (!before) throw { status: 404, message: "Stock line not found.", code: CODE_NOT_FOUND };
 
   const hasFlags =
     input.stockOrdered !== undefined || input.stockConfirmed !== undefined || input.stockIssue !== undefined;
@@ -243,7 +244,7 @@ async function patchStockLineTx(
     );
     if (!res.length) {
       const fresh = await query<Record<string, unknown>>(`SELECT * FROM job_lines WHERE id = $1`, [lineId]);
-      throw { status: 409, message: "Stock line changed since you loaded it. Reload and retry.", current: fresh[0] };
+      throw { status: 409, message: "Stock line changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
     }
   }
 
@@ -257,7 +258,7 @@ async function patchStockLineTx(
     );
     if (!res.length) {
       const fresh = await query<Record<string, unknown>>(`SELECT * FROM job_lines WHERE id = $1`, [lineId]);
-      throw { status: 409, message: "Stock line changed since you loaded it. Reload and retry.", current: fresh[0] };
+      throw { status: 409, message: "Stock line changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
     }
   }
   if (input.correction) {
@@ -303,7 +304,7 @@ async function patchStockLineTx(
 // L5: removing a job line appends history first; FK set-null keeps event, snapshot lives in payload
 export async function removeJobLine(jobId: string, lineId: string, user: SessionUser): Promise<void> {
   const snap = await lineSnapshot(lineId);
-  if (!snap) throw { status: 404, message: "Job line not found." };
+  if (!snap) throw { status: 404, message: "Job line not found.", code: CODE_NOT_FOUND };
   await appendStockEvent({
     jobId,
     jobLineId: lineId,

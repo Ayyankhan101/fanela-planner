@@ -9,6 +9,12 @@ import {
 import { clientIp, err } from "@/lib/http";
 import { MFA_COOKIE } from "@/lib/auth/mfa";
 import { generateRecoveryCodes } from "@/lib/auth/recovery";
+import {
+  MSG_MFA_ENROLL_INVALID_BODY,
+  MSG_MFA_SETUP_EXPIRED,
+  MSG_MFA_ENROLL_INVALID_CODE,
+  CODE_MFA_ENROLL_INVALID,
+} from "@/lib/errors";
 
 const body = z.object({
   secret: z.string().min(16).max(64),
@@ -20,7 +26,7 @@ const body = z.object({
 export async function POST(req: Request) {
   const ip = clientIp(req);
   const parsed = body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(400, "Enter secret and 6-digit code.");
+  if (!parsed.success) return err(400, MSG_MFA_ENROLL_INVALID_BODY, CODE_MFA_ENROLL_INVALID);
 
   const pendingId = readCookie(req, MFA_COOKIE);
   let userId: string | null = null;
@@ -48,11 +54,11 @@ export async function POST(req: Request) {
       email = user.email;
     }
   }
-  if (!userId) return err(401, "Setup step expired. Sign in again.");
+  if (!userId) return err(401, MSG_MFA_SETUP_EXPIRED, CODE_MFA_ENROLL_INVALID);
 
   if (!verifyTotp(parsed.data.secret, parsed.data.token)) {
     await recordLogin(email, ip, false);
-    return err(401, "Invalid code. Scan the QR again and retry.");
+    return err(401, MSG_MFA_ENROLL_INVALID_CODE, CODE_MFA_ENROLL_INVALID);
   }
 
   const { codes, stored } = generateRecoveryCodes();

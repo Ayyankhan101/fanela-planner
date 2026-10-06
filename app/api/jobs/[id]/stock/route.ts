@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermission, err, toResponse } from "@/lib/http";
 import { stockOverview, patchStockLine } from "@/lib/services/stock";
+import {
+  MSG_INVALID_REQUEST,
+  CODE_VALIDATION_ERROR,
+  MSG_JOB_NOT_FOUND,
+  CODE_JOB_NOT_FOUND,
+  MSG_INVALID_RECEIPT_QTY,
+  CODE_INVALID_RECEIPT_QTY,
+} from "@/lib/errors";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,7 +18,7 @@ export async function GET(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const overview = await stockOverview(id);
-  if (!overview) return err(404, "Job not found.");
+  if (!overview) return err(404, MSG_JOB_NOT_FOUND, CODE_JOB_NOT_FOUND);
   return NextResponse.json({ stock: overview });
 }
 
@@ -39,9 +47,9 @@ export async function PATCH(req: Request, { params }: Params) {
   if ("error" in auth) return auth.error;
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return err(422, parsed.error.issues[0]?.message ?? "Invalid stock update.");
+  if (!parsed.success) return err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR);
   const { lineId, version, ...input } = parsed.data;
-  if (input.receipt && input.receipt.qty < 0) return err(422, "Receipt quantity cannot be negative.");
+  if (input.receipt && input.receipt.qty < 0) return err(422, MSG_INVALID_RECEIPT_QTY, CODE_INVALID_RECEIPT_QTY);
   try {
     const next = await patchStockLine(id, lineId, input, version, auth.user);
     const stock = await stockOverview(id);

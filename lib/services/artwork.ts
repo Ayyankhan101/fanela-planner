@@ -3,6 +3,7 @@ import { query, withTransaction } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
 import { audit } from "./audit";
 import { emitNotification } from "./notifications";
+import { CODE_FORBIDDEN, CODE_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 // Artwork approval machine (A1–A5): Draft → Awaiting Approval → Approved | Rejected;
 // revise Approved/Rejected → NEW version at Draft (A3), rejected record never rewritten.
@@ -90,13 +91,13 @@ export function patchArtwork(jobId: string, input: ArtworkPatchInput, user: Sess
 async function patchArtworkTx(jobId: string, input: ArtworkPatchInput, user: SessionUser): Promise<number> {
   // A2: approve / revise / any artwork mutation — Admin + Operations only (artwork.approve)
   const isApprover = user.roles.includes("admin") || user.roles.includes("ops");
-  if (!isApprover) throw { status: 403, message: "Artwork changes require Admin or Operations." };
+  if (!isApprover) throw { status: 403, message: "Artwork changes require Admin or Operations.", code: CODE_FORBIDDEN };
 
   await ensureArtwork(jobId, user);
   const st = await loadArtwork(jobId);
-  if (!st) throw { status: 404, message: "Artwork not found." };
+  if (!st) throw { status: 404, message: "Artwork not found.", code: CODE_NOT_FOUND };
   if (Number(st.version) !== input.version) {
-    throw { status: 409, message: "Artwork changed since you loaded it. Reload and retry." };
+    throw { status: 409, message: "Artwork changed since you loaded it. Reload and retry.", code: CODE_STALE_JOB };
   }
 
   const before = { status: st.status, proofRef: st.proof_ref, pantoneNotes: st.pantone_notes, version: st.version };
@@ -104,7 +105,7 @@ async function patchArtworkTx(jobId: string, input: ArtworkPatchInput, user: Ses
   if (input.action == null) {
     // metadata edit allowed on draft/awaiting only — approved record immutable until revised (A3)
     if (st.status === "approved" || st.status === "rejected") {
-      throw { status: 422, message: "Approved/rejected artwork is fixed. Revise to create a new version." };
+      throw { status: 422, message: "Approved/rejected artwork is fixed. Revise to create a new version.", code: CODE_VALIDATION_ERROR };
     }
     await query(
       `UPDATE artwork_versions SET proof_ref = $1, pantone_notes = $2 WHERE id = $3 AND version = $4`,
@@ -123,10 +124,10 @@ async function patchArtworkTx(jobId: string, input: ArtworkPatchInput, user: Ses
     (input.action === "reject" && st.status === "awaiting") ||
     (input.action === "revise" && (st.status === "approved" || st.status === "rejected"));
   if (!valid) {
-    throw { status: 422, message: `Invalid artwork transition: ${st.status} → ${input.action}.` };
+    throw { status: 422, message: `Invalid artwork transition: ${st.status} → ${input.action}.`, code: CODE_VALIDATION_ERROR };
   }
   if ((input.action === "reject" || input.action === "revise") && !input.reason?.trim()) {
-    throw { status: 422, message: "A reason is required." };
+    throw { status: 422, message: "A reason is required.", code: CODE_VALIDATION_ERROR };
   }
 
   if (input.action === "revise") {
@@ -164,7 +165,7 @@ async function patchArtworkTx(jobId: string, input: ArtworkPatchInput, user: Ses
     `UPDATE artwork_versions SET ${sets.join(", ")} WHERE id = $1 AND version = ${Number(input.version)} RETURNING 'x' AS n`,
     p,
   );
-  if (!res.length) throw { status: 409, message: "Artwork changed since you loaded it. Reload and retry." };
+  if (!res.length) throw { status: 409, message: "Artwork changed since you loaded it. Reload and retry.", code: CODE_STALE_JOB };
 
   const after = await loadArtwork(jobId);
   await writeArtworkEvent(st.version_row_id, input.action, user, input.reason ?? null, before, after);

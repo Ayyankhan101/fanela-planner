@@ -5,7 +5,7 @@ import { can, isAdminOrOps } from "@/lib/auth/access";
 import { audit } from "./audit";
 import { emitNotification } from "./notifications";
 import { updateReadinessCache } from "./readiness";
-import { MSG_FORBIDDEN, CODE_FORBIDDEN } from "@/lib/errors";
+import { MSG_FORBIDDEN, CODE_FORBIDDEN, CODE_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
 
 // Swatch machine (S1–S10). Terminal attempts immutable (S6); latest decides gate (S9).
 
@@ -46,10 +46,10 @@ export async function setSwatchRequirement(
   reason: string | undefined,
   user: SessionUser,
 ): Promise<void> {
-  if (!isAdminOrOps(user)) throw { status: 403, message: "Swatch requirement changes require Admin or Operations." };
-  if (!required && !reason?.trim()) throw { status: 422, message: "Removing the requirement needs a reason." };
+  if (!isAdminOrOps(user)) throw { status: 403, message: "Swatch requirement changes require Admin or Operations.", code: CODE_FORBIDDEN };
+  if (!required && !reason?.trim()) throw { status: 422, message: "Removing the requirement needs a reason.", code: CODE_VALIDATION_ERROR };
   const before = await query(`SELECT * FROM swatch_requirements WHERE job_id = $1`, [jobId]);
-  if (!before[0]) throw { status: 404, message: "Swatch requirement not found." };
+  if (!before[0]) throw { status: 404, message: "Swatch requirement not found.", code: CODE_NOT_FOUND };
   await query(
     `UPDATE swatch_requirements SET required = $1, waived_by = $2, waived_reason = $3, waived_at = $4 WHERE job_id = $5`,
     [required, required ? null : user.id, required ? null : reason ?? null, required ? null : new Date().toISOString(), jobId],
@@ -81,10 +81,10 @@ export async function createAttempt(
     [jobId],
   );
   if (latest[0] && !TERMINAL.includes(latest[0].status)) {
-    throw { status: 422, message: "Finish the current attempt before starting a new one." };
+    throw { status: 422, message: "Finish the current attempt before starting a new one.", code: CODE_VALIDATION_ERROR };
   }
   if (latest[0]?.status === "approved") {
-    throw { status: 422, message: "Swatch already approved. Re-open the requirement instead." };
+    throw { status: 422, message: "Swatch already approved. Re-open the requirement instead.", code: CODE_VALIDATION_ERROR };
   }
   const attemptNo = latest[0] ? latest[0].attempt_no + 1 : 1;
   const id = randomUUID();
@@ -144,31 +144,31 @@ async function patchAttemptTx(
   user: SessionUser,
 ): Promise<number> {
   const a = await loadAttempt(jobId, attemptId);
-  if (!a) throw { status: 404, message: "Swatch attempt not found." };
+  if (!a) throw { status: 404, message: "Swatch attempt not found.", code: CODE_NOT_FOUND };
 
   // S6: completed attempts can never be changed
   if (TERMINAL.includes(a.status)) {
-    throw { status: 422, message: "A completed swatch attempt cannot be changed. Create a new attempt." };
+    throw { status: 422, message: "A completed swatch attempt cannot be changed. Create a new attempt.", code: CODE_VALIDATION_ERROR };
   }
 
   const isDecision = input.status != null && DECISIONS.includes(input.status);
   if (isDecision) {
-    if (!can(user, "swatch.decide")) throw { status: 403, message: "Swatch decisions require Admin or Operations." };
+    if (!can(user, "swatch.decide")) throw { status: 403, message: "Swatch decisions require Admin or Operations.", code: CODE_FORBIDDEN };
   } else if (!can(user, "swatch.create", { department: "embroidery" })) {
-    throw { status: 403, message: "Swatch attempts are maintained by Embroidery (Admin/Ops override)." };
+    throw { status: 403, message: "Swatch attempts are maintained by Embroidery (Admin/Ops override).", code: CODE_FORBIDDEN };
   }
 
   if (Number(a.version) !== input.version) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM swatch_attempts WHERE id = $1`, [attemptId]);
-    throw { status: 409, message: "Swatch attempt changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Swatch attempt changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
 
   const target = input.status ?? a.status;
   if (target !== a.status && !FLOW[a.status]?.includes(target)) {
-    throw { status: 422, message: `Invalid swatch transition: ${a.status} → ${target}.` };
+    throw { status: 422, message: `Invalid swatch transition: ${a.status} → ${target}.`, code: CODE_VALIDATION_ERROR };
   }
   if ((target === "rejected" || target === "re_swatch") && !input.reason?.trim()) {
-    throw { status: 422, message: "A reason is required for reject / re-swatch decisions." };
+    throw { status: 422, message: "A reason is required for reject / re-swatch decisions.", code: CODE_VALIDATION_ERROR };
   }
 
   const p: unknown[] = [attemptId, jobId, input.version];
@@ -212,7 +212,7 @@ async function patchAttemptTx(
   );
   if (!res.length) {
     const fresh = await query<Record<string, unknown>>(`SELECT * FROM swatch_attempts WHERE id = $1`, [attemptId]);
-    throw { status: 409, message: "Swatch attempt changed since you loaded it. Reload and retry.", current: fresh[0] };
+    throw { status: 409, message: "Swatch attempt changed since you loaded it. Reload and retry.", current: fresh[0], code: CODE_STALE_JOB };
   }
   const after = await query(`SELECT * FROM swatch_attempts WHERE id = $1`, [attemptId]);
 
