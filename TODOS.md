@@ -62,6 +62,7 @@ Open items discovered during development. Checked = done.
 
 **Draft (2026-10-03, CC; owner-confirmed 2026-10-05):**
 - **Gate-in:** C3 dry-run passes (full legacy export imports clean, spot-reconcile Δ=0) + C5 operator demo accepted + prod runbook (`docs/ops/runbook.md`) live + monitoring proven on prod for ≥5 working days.
+**Monitoring status (2026-10-06):** prod box live — app + outbox worker supervised launchd KeepAlive; backup/integrity/sweep/uptime agents installed; uptime probe success-logging enabled (`logs/uptime.out.log`). Clock: ≥5 working days from 2026-10-06 clean-probe days. Runbook live ✓.
 - **Parallel-run:** 14 working days dual entry (legacy + Fanela), daily reconciliation = job count Δ=0 and no Fanela-only write failures; any Δ>0 resets the counter.
 - **Metrics at cutover:** take C7 baselines — (1) median minutes/job (legacy vs Fanela), (2) % live jobs tracked in Fanela (target 100% at shutdown).
 - **Proposed cutover date rule:** gate-in date + 14 working days + 2 (reconciliation buffer) — fill concrete date once gate-in date is known.
