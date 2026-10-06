@@ -53,6 +53,12 @@ then re-run `npm run db:seed` — the first-run branch in `db/seed.mts` re-arms 
 | `npm run db:security` | **Applies RLS/grants via `db/migrate-all.sh`** — name mismatch is intentional: script says *migrate-all*, the step it adds is *security* (schema → `fanela_app` role → grants → RLS, spec §6.3 order) | `done (schema → role → grants → rls)` | first failing `db/security/*.sql` printed by `psql -v ON_ERROR_STOP=1`; if the role is missing: does `SELECT 1 FROM pg_roles WHERE rolname='fanela_app'` return a row? |
 | `npm run db:seed` | Idempotent seed (`tsx db/seed.mts`) | `admin recovery codes (shown once): …` (first run) or quiet pass | `DATABASE_URL`; check `users` row exists |
 | `npm run setup` | `db:migrate` → `db:security` → `db:seed` → lint → typecheck → test (D6 golden path; typecheck runs typegen first) | test tail green | walk the chain — first failing step's table row above |
+| `npm run user:add` | Create/upsert a user (re-hashes password, reactivates) — see `docs/ops/secrets.md` | row in `users` | role valid? email unique? |
+| `npm run storage:sweep` | Delete orphan uploads past the grace window (runbook §4b) | freed bytes logged | `storage/uploads` reachable; prod cron 03:00 |
+| `npm run outbox:worker` | pg-boss tick every 15 s — claims `integration_outbox` rows (senders gated on D1–D6/X1–X5 — rows sit pending by design) | worker log ticks | runbook §4c; prod launchd `com.fanela.outbox` |
+| `npm run typegen` | Generate `.next/types` route globals (also runs inside `typecheck`) | fresh `.next/types` | `next.config.ts` |
+
+**Deploy:** production deploys via `./scripts/deploy.sh` (git pull → `npm ci` → build → `db:migrate` → `db:security` → launchd restart). Full ops runbook (launchd jobs, backups, monitoring, drills): `docs/ops/runbook.md`.
 
 ## API
 
@@ -150,4 +156,8 @@ Local dev + tests use **Homebrew PostgreSQL 18.4** — the single source of trut
 | `docs/superpowers/specs/2026-09-27-fanela-central-system-design.md` | Approved design spec |
 | `docs/superpowers/plans/2026-09-30-fanela-implementation-plan.md` | Active implementation plan (task checklist) |
 | `docs/superpowers/spikes/` | Time-boxed spike records (ExcelJS ceiling, …) |
-| `TODOS.md` | Deferred items (8 entries) |
+| `docs/ops/runbook.md` | Production ops runbook — deploy, launchd jobs, backups, monitoring, drills |
+| `docs/ops/secrets.md` | Secrets decision (`.env` @ 600) + rotation procedures |
+| `docs/ops/c5-demo-checklist.md` | C5 operator demo checklist + dry-run findings |
+| `CHANGELOG.md` | Release history (0.2.0+) |
+| `TODOS.md` | Open items + completed closure records |

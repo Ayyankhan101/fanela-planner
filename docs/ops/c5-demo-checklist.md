@@ -10,8 +10,8 @@ facilitator only answers "where is it" questions, never touches the keyboard.
 
 ## Preconditions (day before)
 
-- [ ] Box live, deploy current (`./scripts/deploy.sh`), `logs/app.*.log` clean
-- [ ] Nightly backup ran (runbook §2) — restore point exists
+- [x] Box live, deploy current (`./scripts/deploy.sh`), `logs/app.*.log` clean — **verified 2026-10-06** (PR #15: app + outbox worker launchd KeepAlive; uptime probe logged `fanela up: HTTP 200`)
+- [x] Nightly backup ran (runbook §2) — restore point exists — **first prod dump scheduled 2026-10-07 01:30**; re-verify restore point the day before the session (2026-10-09)
 - [ ] Login ready: `admin@fanela.local` + TOTP (+ recovery codes handy)
 - [ ] Fresh demo job number reserved: **`DEMO-C5-001`**, customer `C5 Demo Co`
 - [ ] Screens/projector shareable; timer started at session open
@@ -33,7 +33,7 @@ facilitator only answers "where is it" questions, never touches the keyboard.
 | 10 | Stages tab → per department: set **In progress**, then **Completed** (waiting can't jump straight to completed) | Each stage lands; Dispatch stage stays open until finalise (by design) | ☐ |
 | 11 | Dispatch tab → record booking → dispatch shipment | Shipment booked + dispatched; audit rows | ☐ |
 | 12 | Finalise dispatch | Job → **Completed**; finalise rejected while a shipment is open (expected) | ☐ |
-| 13 | `/audit` → filter by the job's UUID (copy from job URL) | Full trail: job, lines, stock, artwork, swatch, stages, dispatch | ☐ |
+| 13 | `/audit` → filter by the job's **job number or UUID prefix** | Full trail: job, lines, stock, artwork, swatch, stages, dispatch | ☐ |
 | 14 | (time permitting) export the job list | Role-filtered columns (no costs for Office) | ☐ |
 
 ## Acceptance (C5 passes when)
@@ -56,12 +56,12 @@ Severity: `blocker` (can't finish flow) · `high` (worked around, painful) ·
 All 14 steps completed end-to-end on `DEMO-C5-001` (→ job `completed`, 35 audit
 rows, export 200 xlsx). Findings:
 
-| Step | What happened | Severity |
-|---|---|---|
-| 3 | Customers list renders the entire table (10k+ cells with dev data), no pagination or search — slow page, unusable at scale | high |
-| 4 | Job-form customer picker = native `<select>` with every customer as an option, no typeahead | medium |
-| 9 | Swatch **Approve demands a reason** (client + server), but the field placeholder, error text ("reject / re-swatch"), and rule S4 all say reason is for reject/re-swatch only — approve blocked until a reason is typed | high |
-| 13 | Audit page filters by **job UUID only**; operators know job numbers, not UUIDs | medium |
+| Step | What happened | Severity | Status |
+|---|---|---|---|
+| 3 | Customers list renders the entire table (10k+ cells with dev data), no pagination or search — slow page, unusable at scale | high | ☑ fixed 2026-10-06 — `abf5d1e` (50/page + pager), CI-robust test `f9ba67e` |
+| 4 | Job-form customer picker = native `<select>` with every customer as an option, no typeahead | medium | ☑ fixed 2026-10-06 — `ef8fd11` (filterable combobox) |
+| 9 | Swatch **Approve demands a reason** (client + server), but the field placeholder, error text ("reject / re-swatch"), and rule S4 all say reason is for reject/re-swatch only — approve blocked until a reason is typed | high | ☑ fixed 2026-10-06 — `3a59679`, regression test `e33c8ef` (reject/re-swatch still 422) |
+| 13 | Audit page filters by **job UUID only**; operators know job numbers, not UUIDs | medium | ☑ fixed 2026-10-06 — `5016baa` (job number + UUID prefix), regression test `c957d18` |
 
 Rule-correct behaviours confirmed (not bugs, but checklist must explain them):
 stage `waiting → in_progress → completed` (direct complete = 422); Dispatch
