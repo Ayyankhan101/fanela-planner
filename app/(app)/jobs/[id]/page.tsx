@@ -36,13 +36,13 @@ function ReadinessStrip({ readiness }: { readiness: Rec | null }) {
       {Object.entries(gates).map(([k, g]) => (
         <span
           key={k}
-          className={`rounded-full px-2 py-0.5 text-xs ${
-            !g.active
-              ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-600"
-              : g.pass
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
-          }`}
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                !g.active
+                  ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-500"
+                  : g.pass
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+              }`}
         >
           {GATE_LABEL[k] ?? k}: {!g.active ? "n/a" : g.pass ? "pass" : "waiting"}
         </span>
@@ -83,7 +83,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-mono text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h1 className="font-mono text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
             {String(job.job_number)}
           </h1>
           <p className="text-sm text-zinc-500">
@@ -95,7 +95,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
           <div>
             <div className="text-zinc-500">Status</div>
             <div className="font-medium">{status}</div>
-            {job.archived ? <div className="text-xs text-zinc-400">archived</div> : null}
+            {job.archived ? <div className="text-xs text-zinc-500">archived</div> : null}
           </div>
           {canCancel && <CancelJobButton jobId={String(job.id)} status={status} />}
         </div>

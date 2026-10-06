@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { btnCls, inputCls, primaryCls, sectionCls, titleCls } from "../ui";
+import { btnCls, errorCls, inputCls, primaryCls, sectionCls, titleCls } from "../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -47,7 +47,7 @@ export function AuditTable() {
     <section className={sectionCls}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className={`${titleCls} mb-0`}>Audit log</h2>
-        <span className="text-xs text-zinc-400">{events.length} event(s)</span>
+        <span className="text-xs text-zinc-500">{events.length} event(s)</span>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -55,7 +55,7 @@ export function AuditTable() {
           value={jobId}
           onChange={(e) => setJobId(e.target.value)}
           placeholder="Filter by job number or UUID"
-          className={`${inputCls} w-72`}
+          className={`${inputCls} w-full sm:w-72`}
         />
         <select value={entityType} onChange={(e) => setEntityType(e.target.value)} className={inputCls}>
           <option value="">All entities</option>
@@ -70,22 +70,26 @@ export function AuditTable() {
         </button>
       </div>
 
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mb-2">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
       {loading ? (
         <p className="text-sm text-zinc-500">Loading…</p>
       ) : events.length === 0 ? (
         !error && <p className="text-sm text-zinc-500">No events match.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-xs">
             <thead className="text-xs uppercase text-zinc-500">
               <tr>
-                <th className="py-1 pr-4">Time</th>
-                <th className="py-1 pr-4">Action</th>
-                <th className="py-1 pr-4">Entity</th>
-                <th className="py-1 pr-4">Job</th>
-                <th className="py-1 pr-4">Role</th>
-                <th className="py-1 pr-4">Details</th>
+                <th className="py-1.5 pr-4 font-semibold">Time</th>
+                <th className="py-1.5 pr-4 font-semibold">Action</th>
+                <th className="py-1.5 pr-4 font-semibold">Entity</th>
+                <th className="py-1.5 pr-4 font-semibold">Job</th>
+                <th className="py-1.5 pr-4 font-semibold">Role</th>
+                <th className="py-1.5 pr-4 font-semibold">Details</th>
               </tr>
             </thead>
             <tbody>
@@ -104,7 +108,7 @@ export function AuditTable() {
                   <td className="py-1.5 pr-4">
                     <details>
                       <summary className="cursor-pointer text-xs text-blue-600 dark:text-blue-400">view</summary>
-                      <pre className="mt-1 max-w-xl overflow-x-auto rounded bg-zinc-50 p-2 text-[10px] text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+                      <pre className="mt-1 max-w-xl overflow-x-auto rounded bg-zinc-50 p-2 text-[10px] text-zinc-600 dark:bg-zinc-900 dark:text-zinc-500">
                         {JSON.stringify({ before: e.before, after: e.after }, null, 2)}
                       </pre>
                     </details>
@@ -115,7 +119,7 @@ export function AuditTable() {
           </table>
         </div>
       )}
-      <p className="mt-3 text-xs text-zinc-400">
+      <p className="mt-3 text-xs text-zinc-500">
         Append-only: entries are written by the server and never edited or deleted.{" "}
         <button onClick={() => { setLoading(true); void fetchEvents(); }} className={`${btnCls} !px-2 !py-0.5 !text-xs`}>
           Refresh

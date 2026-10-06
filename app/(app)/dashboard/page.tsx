@@ -60,7 +60,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Dashboard</h1>
+      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Dashboard</h1>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="Active jobs" value={activeTotal} href="/jobs" />
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
                 <Link href={r.href} className="flex items-center gap-2 text-sm hover:underline">
                   <span className={`h-2.5 w-2.5 rounded-full ${r.dot}`} />
                   <span className="text-zinc-700 dark:text-zinc-300">{r.label}</span>
-                  <span className="ml-auto font-medium text-zinc-900 dark:text-zinc-50">{r.n}</span>
+                  <span className="ml-auto font-mono text-xs font-medium text-zinc-900 dark:text-zinc-50">{r.n}</span>
                 </Link>
               </li>
             ))}
@@ -90,19 +90,19 @@ export default async function DashboardPage() {
           <ul className="space-y-2 text-sm">
             <li className="flex items-center justify-between">
               <span className="text-zinc-700 dark:text-zinc-300">Swatches awaiting approval</span>
-              <span className={`font-medium ${data.queues.swatchAwaiting > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-900 dark:text-zinc-50"}`}>
+              <span className={`font-mono text-xs font-medium ${data.queues.swatchAwaiting > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-900 dark:text-zinc-50"}`}>
                 {data.queues.swatchAwaiting}
               </span>
             </li>
             <li className="flex items-center justify-between">
               <span className="text-zinc-700 dark:text-zinc-300">Artwork awaiting approval</span>
-              <span className={`font-medium ${data.queues.artworkAwaiting > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-900 dark:text-zinc-50"}`}>
+              <span className={`font-mono text-xs font-medium ${data.queues.artworkAwaiting > 0 ? "text-amber-600 dark:text-amber-400" : "text-zinc-900 dark:text-zinc-50"}`}>
                 {data.queues.artworkAwaiting}
               </span>
             </li>
             <li className="flex items-center justify-between">
               <span className="text-zinc-700 dark:text-zinc-300">Lines with stock issues</span>
-              <span className={`font-medium ${data.queues.stockIssues > 0 ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-50"}`}>
+              <span className={`font-mono text-xs font-medium ${data.queues.stockIssues > 0 ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-50"}`}>
                 {data.queues.stockIssues}
               </span>
             </li>
@@ -145,7 +145,7 @@ export default async function DashboardPage() {
                 const jobId = rec.job_id as string | null;
                 return (
                   <li key={String(rec.id)} className="flex items-center gap-2 py-2 text-sm">
-                    <span className="text-zinc-400">{String(rec.ts).replace("T", " ").slice(0, 16)}</span>
+                    <span className="text-zinc-500">{String(rec.ts).replace("T", " ").slice(0, 16)}</span>
                     <span className="font-medium text-zinc-800 dark:text-zinc-200">{String(rec.action)}</span>
                     <span className="text-zinc-500">{String(rec.entity_type)}</span>
                     {jobId && (
@@ -169,12 +169,12 @@ export default async function DashboardPage() {
       <div className={cardCls}>
         <div className={headingCls}>Stages by department (active jobs)</div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
-                <th className="py-2 pr-4 font-medium">Department</th>
+                <th className="py-2 pr-4 font-semibold">Department</th>
                 {STATUS_COLS.map((c) => (
-                  <th key={c.key} className="py-2 pr-4 text-right font-medium">
+                  <th key={c.key} className="py-2 pr-4 text-right font-semibold">
                     {c.label}
                   </th>
                 ))}
@@ -189,13 +189,11 @@ export default async function DashboardPage() {
                     const tone =
                       c.key === "blocked" && n > 0
                         ? "text-red-600 dark:text-red-400"
-                        : c.key === "completed" && n > 0
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : n > 0
-                            ? "text-zinc-900 dark:text-zinc-50"
-                            : "text-zinc-300 dark:text-zinc-700";
+                        : n > 0
+                          ? "text-zinc-900 dark:text-zinc-50"
+                          : "text-zinc-300 dark:text-zinc-700";
                     return (
-                      <td key={c.key} className={`py-2 pr-4 text-right ${tone}`}>
+                      <td key={c.key} className={`py-2 pr-4 text-right font-mono ${tone}`}>
                         {n}
                       </td>
                     );

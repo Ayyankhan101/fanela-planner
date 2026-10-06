@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls, btnCls, primaryCls, dangerCls, send, sectionCls, titleCls } from "../../../ui";
+import { inputCls, btnCls, dangerCls, errorCls, primaryCls, send, sectionCls, titleCls } from "../../../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -53,6 +53,12 @@ export function DispatchPanel({
   const [method, setMethod] = useState(plan.method ?? "");
   const [address, setAddress] = useState(plan.address ?? "");
   const [shipMethod, setShipMethod] = useState<string>(METHODS[1]);
+  // inline confirmations (DESIGN.md: no modals for destructive actions)
+  const [voidPending, setVoidPending] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [handoverPending, setHandoverPending] = useState<string | null>(null);
+  const [abandonForm, setAbandonForm] = useState(false);
+  const [abandonReason, setAbandonReason] = useState("");
 
   async function savePlan() {
     setBusy("plan");
@@ -79,12 +85,13 @@ export function DispatchPanel({
   async function advance(s: Rec, status: string) {
     let body: Record<string, unknown> = { version: Number(s.version ?? 0), status };
     if (status === "void") {
-      const reason = prompt("Void reason (required):");
-      if (!reason?.trim()) return;
-      body = { ...body, reason: reason.trim() };
+      if (!voidReason.trim()) {
+        setError("A void reason is required.");
+        return;
+      }
+      body = { ...body, reason: voidReason.trim() };
     }
     if (["dispatched", "collected"].includes(status) && String(s.method) === "Collection") {
-      if (!confirm("Confirm this Collection has been handed over?")) return;
       body = { ...body, confirmCollection: true };
     }
     setBusy(`${String(s.id)}:${status}`);
@@ -92,22 +99,33 @@ export function DispatchPanel({
     const r = await send("PATCH", `/api/shipments/${String(s.id)}`, body);
     setBusy("");
     if (!r.ok) setError(r.error);
-    else router.refresh();
+    else {
+      setVoidPending(null);
+      setVoidReason("");
+      setHandoverPending(null);
+      router.refresh();
+    }
   }
 
   async function finalise(abandon: boolean) {
     let body: Record<string, unknown> = {};
     if (abandon) {
-      const reason = prompt("Some shipments are not final. Abandon reason (required):");
-      if (!reason?.trim()) return;
-      body = { abandon: true, reason: reason.trim() };
+      if (!abandonReason.trim()) {
+        setError("An abandon reason is required.");
+        return;
+      }
+      body = { abandon: true, reason: abandonReason.trim() };
     }
     setBusy(abandon ? "finalise-abandon" : "finalise");
     setError("");
     const r = await send("POST", `/api/jobs/${jobId}/dispatch/finalise`, body);
     setBusy("");
     if (!r.ok) setError(r.error);
-    else router.refresh();
+    else {
+      setAbandonForm(false);
+      setAbandonReason("");
+      router.refresh();
+    }
   }
 
   return (
@@ -145,10 +163,10 @@ export function DispatchPanel({
       )}
 
       <div className="mt-4 space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-xs font-semibold uppercase text-zinc-500">Shipments</h3>
           {canDispatch && (
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <select value={shipMethod} onChange={(e) => setShipMethod(e.target.value)} className={`${inputCls} !py-1 text-xs`}>
                 {METHODS.map((m) => (
                   <option key={m} value={m}>
@@ -157,7 +175,7 @@ export function DispatchPanel({
                 ))}
               </select>
               <button onClick={addShipment} disabled={busy !== ""} className={`${btnCls} !px-2 !py-1 !text-xs`}>
-                {busy === "add" ? "…" : "+ Shipment"}
+                {busy === "add" ? "Adding…" : "+ Shipment"}
               </button>
             </span>
           )}
@@ -167,8 +185,9 @@ export function DispatchPanel({
         {shipments.map((s) => {
           const status = String(s.status);
           const next = SHIPMENT_FLOW[status] ?? [];
+          const sid = String(s.id);
           return (
-            <div key={String(s.id)} className="rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+            <div key={sid} className="rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>
                   <strong>{String(s.method)}</strong>
@@ -181,7 +200,7 @@ export function DispatchPanel({
                     ["dispatched", "collected"].includes(status)
                       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
                       : status === "void"
-                        ? "bg-zinc-100 text-zinc-400 line-through dark:bg-zinc-900"
+                        ? "bg-zinc-100 text-zinc-500 line-through dark:bg-zinc-900 dark:text-zinc-500"
                         : "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300"
                   }`}
                 >
@@ -189,20 +208,83 @@ export function DispatchPanel({
                 </span>
               </div>
               {status === "void" && s.void_reason ? (
-                <p className="mt-1 text-xs text-zinc-400">Void: {String(s.void_reason)}</p>
+                <p className="mt-1 text-xs text-zinc-500">Void: {String(s.void_reason)}</p>
               ) : null}
               {canDispatch && next.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {next.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => advance(s, t)}
-                      disabled={busy !== ""}
-                      className={`${btnCls} !px-2 !py-1 !text-xs ${t === "void" ? "!border-red-300 !text-red-600 dark:!border-red-900 dark:!text-red-400" : ""}`}
-                    >
-                      {busy === `${String(s.id)}:${t}` ? "…" : t === "void" ? "Void" : `→ ${LABEL[t]}`}
-                    </button>
-                  ))}
+                <div className="mt-2 space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {next.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          if (t === "void") {
+                            setVoidPending(sid);
+                            setVoidReason("");
+                            setError("");
+                          } else if (["dispatched", "collected"].includes(t) && String(s.method) === "Collection") {
+                            setHandoverPending(sid);
+                            setError("");
+                          } else {
+                            void advance(s, t);
+                          }
+                        }}
+                        disabled={busy !== ""}
+                        className={`${btnCls} !px-2 !py-1 !text-xs ${t === "void" ? "!border-red-300 !text-red-600 dark:!border-red-900 dark:!text-red-400" : ""}`}
+                      >
+                        {busy === `${sid}:${t}` ? "Updating…" : t === "void" ? "Void" : `→ ${LABEL[t]}`}
+                      </button>
+                    ))}
+                  </div>
+                  {voidPending === sid && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-red-300 bg-red-50 px-2 py-2 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                      <label className="flex flex-col gap-1 text-xs">
+                        Void reason (required)
+                        <input
+                          value={voidReason}
+                          onChange={(e) => setVoidReason(e.target.value)}
+                          placeholder="Why is this shipment void?"
+                          className={`${inputCls} min-w-48`}
+                        />
+                      </label>
+                      <button
+                        onClick={() => {
+                          const t = "void";
+                          void advance(s, t);
+                        }}
+                        disabled={busy !== ""}
+                        className={`${dangerCls} !px-2 !py-1 !text-xs`}
+                      >
+                        {busy === `${sid}:void` ? "Voiding…" : "Confirm void"}
+                      </button>
+                      <button
+                        onClick={() => { setVoidPending(null); setVoidReason(""); setError(""); }}
+                        className={`${btnCls} !px-2 !py-1 !text-xs !border-transparent !bg-transparent !text-zinc-700 dark:!text-zinc-300`}
+                      >
+                        Keep
+                      </button>
+                    </div>
+                  )}
+                  {handoverPending === sid && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-2 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                      Confirm this Collection has been handed over?
+                      <button
+                        onClick={() => {
+                          const t = status === "dispatched" ? "dispatched" : "collected";
+                          void advance(s, t);
+                        }}
+                        disabled={busy !== ""}
+                        className={`${btnCls} !px-2 !py-1 !text-xs`}
+                      >
+                        {busy === `${sid}:${status}` ? "Confirming…" : "Confirm handover"}
+                      </button>
+                      <button
+                        onClick={() => setHandoverPending(null)}
+                        className={`${btnCls} !px-2 !py-1 !text-xs !border-transparent !bg-transparent !text-zinc-700 dark:!text-zinc-300`}
+                      >
+                        Keep
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -211,17 +293,45 @@ export function DispatchPanel({
       </div>
 
       {canDispatch && (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-          <button onClick={() => finalise(false)} disabled={busy !== ""} className={primaryCls}>
-            {busy === "finalise" ? "Finalising…" : "Finalise dispatch"}
-          </button>
-          <button onClick={() => finalise(true)} disabled={busy !== ""} className={dangerCls}>
-            {busy === "finalise-abandon" ? "…" : "Finalise + abandon pending"}
-          </button>
+        <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => finalise(false)} disabled={busy !== ""} className={primaryCls}>
+              {busy === "finalise" ? "Finalising…" : "Finalise dispatch"}
+            </button>
+            <button onClick={() => { setAbandonForm(true); setError(""); }} disabled={busy !== ""} className={dangerCls}>
+              Finalise + abandon pending
+            </button>
+          </div>
+          {abandonForm && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-red-300 bg-red-50 px-2 py-2 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              <label className="flex flex-col gap-1 text-xs">
+                Abandon reason (required)
+                <input
+                  value={abandonReason}
+                  onChange={(e) => setAbandonReason(e.target.value)}
+                  placeholder="Why are pending shipments abandoned?"
+                  className={`${inputCls} min-w-48`}
+                />
+              </label>
+              <button onClick={() => finalise(true)} disabled={busy !== ""} className={`${dangerCls} !px-2 !py-1 !text-xs`}>
+                {busy === "finalise-abandon" ? "Finalising…" : "Confirm abandon"}
+              </button>
+              <button
+                onClick={() => { setAbandonForm(false); setAbandonReason(""); setError(""); }}
+                className={`${btnCls} !px-2 !py-1 !text-xs !border-transparent !bg-transparent !text-zinc-700 dark:!text-zinc-300`}
+              >
+                Keep pending
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mt-2">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
     </section>
   );
 }

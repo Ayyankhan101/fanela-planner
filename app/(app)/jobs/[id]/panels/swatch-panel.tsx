@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls, btnCls, primaryCls, send, sectionCls, titleCls } from "../../../ui";
+import { inputCls, btnCls, errorCls, primaryCls, send, sectionCls, titleCls } from "../../../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -107,16 +107,16 @@ export function SwatchPanel({
         <span>
           Requirement: <strong>{required ? "required" : "not required"}</strong>
           {!required && requirement?.waived_reason ? (
-            <span className="ml-1 text-xs text-zinc-400">— {String(requirement.waived_reason)}</span>
+            <span className="ml-1 text-xs text-zinc-500">— {String(requirement.waived_reason)}</span>
           ) : null}
         </span>
         {canDecide && (
           <span className="flex gap-2">
             <button onClick={() => setRequirement(true)} disabled={busy !== ""} className={btnCls}>
-              {busy === "req-true" ? "…" : "Require"}
+              {busy === "req-true" ? "Updating…" : "Require"}
             </button>
             <button onClick={() => setRequirement(false)} disabled={busy !== ""} className={btnCls}>
-              {busy === "req-false" ? "…" : "Waive"}
+              {busy === "req-false" ? "Updating…" : "Waive"}
             </button>
           </span>
         )}
@@ -156,7 +156,7 @@ export function SwatchPanel({
                       disabled={busy !== ""}
                       className={`${btnCls} !px-2 !py-1 !text-xs ${t === "approved" ? "border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400" : ""}`}
                     >
-                      {busy === `${String(a.id)}:${t}` ? "…" : LABEL[t]}
+                      {busy === `${String(a.id)}:${t}` ? "Updating…" : LABEL[t]}
                     </button>
                   ))}
                 </div>
@@ -190,13 +190,17 @@ export function SwatchPanel({
               </div>
             </div>
           )}
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-2 text-xs text-zinc-500">
             Attempts: start → awaiting → approve/reject/re-swatch. Terminal attempts are immutable.
           </p>
         </div>
       )}
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mt-2">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
     </section>
   );
 }

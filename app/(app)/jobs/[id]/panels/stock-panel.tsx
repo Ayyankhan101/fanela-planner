@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls, btnCls, send, sectionCls, titleCls } from "../../../ui";
+import { inputCls, btnCls, errorCls, send, sectionCls, titleCls } from "../../../ui";
 
 type Rec = Record<string, unknown>;
 
@@ -110,7 +110,7 @@ export function StockPanel({ jobId, stock, canStock }: { jobId: string; stock: R
                       </label>
                     </span>
                   ) : (
-                    <span className="text-zinc-400">
+                    <span className="text-zinc-500">
                       {l.stockOrdered ? "ordered " : ""}
                       {l.confirmed ? "confirmed" : ""}
                     </span>
@@ -121,7 +121,7 @@ export function StockPanel({ jobId, stock, canStock }: { jobId: string; stock: R
                     <span className="flex gap-1.5">
                       <input id={`rcv-${String(l.id)}`} type="number" min={0} placeholder="qty" className={`${inputCls} !py-1 w-16 text-xs`} />
                       <button onClick={() => receive(l)} disabled={busy === String(l.id)} className={`${btnCls} !px-2 !py-1 !text-xs`}>
-                        {busy === String(l.id) ? "…" : "In"}
+                        {busy === String(l.id) ? "Receiving…" : "In"}
                       </button>
                     </span>
                   </td>
@@ -131,8 +131,12 @@ export function StockPanel({ jobId, stock, canStock }: { jobId: string; stock: R
           </tbody>
         </table>
       </div>
-      {canStock && <p className="mt-2 text-xs text-zinc-400">Receipts append to the stock ledger — corrections are recorded, never overwritten.</p>}
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {canStock && <p className="mt-2 text-xs text-zinc-500">Receipts append to the stock ledger — corrections are recorded, never overwritten.</p>}
+      {error && (
+        <p role="status" aria-live="polite" className="mt-2">
+          <span className={errorCls}>{error}</span>
+        </p>
+      )}
     </section>
   );
 }
