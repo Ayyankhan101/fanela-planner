@@ -62,6 +62,7 @@ export const CODE_MFA_INVALID_RECOVERY_CODE = "mfa_invalid_recovery_code";
 export const CODE_MFA_ENROLL_INVALID = "mfa_enroll_invalid";
 export const CODE_STALE_JOB = "stale_job";
 export const CODE_STALE_BATCH = "stale_batch";
+export const CODE_DUPLICATE_JOB_NUMBER = "duplicate_job_number";
 export const CODE_IMPORT_SHAPE_INVALID = "import_shape_invalid";
 export const CODE_IMPORT_FILE_TOO_LARGE = "import_file_too_large";
 export const CODE_IMPORT_ROW_CAP = "import_row_cap";
@@ -98,6 +99,7 @@ export const ERROR_CODES = [
   CODE_MFA_ENROLL_INVALID,
   CODE_STALE_JOB,
   CODE_STALE_BATCH,
+  CODE_DUPLICATE_JOB_NUMBER,
   CODE_IMPORT_SHAPE_INVALID,
   CODE_IMPORT_FILE_TOO_LARGE,
   CODE_IMPORT_ROW_CAP,

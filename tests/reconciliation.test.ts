@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
-import { makeUser, makeRequest, query } from "./helpers";
+import { makeUser, query } from "./helpers";
 import { POST as uploadRoute } from "@/app/api/admin/import/route";
 import * as importIdRoute from "@/app/api/admin/import/[id]/route";
 import { GET as getJobRoute } from "@/app/api/jobs/[id]/route";

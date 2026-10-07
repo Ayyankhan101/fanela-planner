@@ -246,7 +246,7 @@ Future API mode (post-MVP): server-side credentials, persist request → call DP
 | Browser-storage wipe = data loss | Managed nightly backups, off-box copy |
 | Attachments in browser, 2 MB | MinIO, default 25 MB configurable, MIME allowlist, access-checked presigned URLs |
 | No concurrency handling | Optimistic locking via `version`, conflict → clear error |
-| No error taxonomy (zod/SQL leaks, ad-hoc copy) | **As-built (2026-10-06):** error contract — every API failure emits `{error, code}`; services throw taxonomy-coded `{status, message, code}` from `lib/errors.ts`; zod parse failures → 422 `validation_error` (no raw zod output); probe `tests/error-contract-probe.test.ts`; README error-code table is the anchor (duplicate job-number/PK-clash 409s message-only, documented exception) |
+| No error taxonomy (zod/SQL leaks, ad-hoc copy) | **As-built (2026-10-06):** error contract — every API failure emits `{error, code}`; services throw taxonomy-coded `{status, message, code}` from `lib/errors.ts`; zod parse failures → 422 `validation_error` (no raw zod output); probe `tests/error-contract-probe.test.ts`; README error-code table is the anchor |
 | Local audit | Server append-only, before/after snapshots |
 | Manual-only DPD | MVP keeps manual (server-stored); API adapter later |
 | No Xero | Outbox-pattern adapter post-MVP |

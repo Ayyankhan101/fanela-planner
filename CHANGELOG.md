@@ -13,6 +13,8 @@
 - **Catch-up (prior undocumented work):** outbox worker groundwork (pg-boss v12 + 15 s `outbox-tick`, migration `0005`, `lib/services/outbox.ts` CAS claim/backoff/retry, admin retry endpoint, `tests/outbox.test.ts` 10); audit log UI (`/audit`, nav link); interactive job-detail panels; manual light/dark mode toggle; `scripts/deploy.sh` + `scripts/add-user.mts` (`npm run user:add`); `AUTH_COOKIE_SECURE` LAN opt-out
 
 ### Changed
+- Error-contract residual closed: duplicate job-number / `23505` PK-clash 409s → `duplicate_job_number`; 3 uncoded rule-gate 422s (embroidery swatch gate, dispatch finalise gate, pending-shipment finalise) → `validation_error`; message-only 409 exception retired from README/CLAUDE/spec; additive probe test (441)
+- Eng-free QA sweep (2026-10-07): lint clean (dead `DECISIONS` export + unused test import removed — eslint 0/0); devex browser pass — F1 mobile header overlap at 390px fixed (`nav.tsx` nav wraps to own row below `sm`), F2 jobs empty-search copy now distinguishes no-match from no-list (`No jobs match "…"`); import invalid-file 422 banner + audit job-number filter + customers pager + job combobox re-verified live; evidence `.gstack/qa-reports/devex-report-localhost-3000-2026-10-07.md` (14 screenshots)
 - `CLAUDE.md` conventions: services throw taxonomy-coded `{status, message, code}`; route-edge parse failures → `err(422, MSG_INVALID_REQUEST, CODE_VALIDATION_ERROR)`
 - `docs/phase0/08` status log: 2026-10-06 rows (C6/P5/UX merged PR #13; QA + error contract PR #14 + prod deploy PR #15)
 - `docs/ops/c5-demo-checklist.md`: box-live preconditions annotated 2026-10-06; dry-run findings marked fixed; step 13 wording (job number or UUID)

@@ -117,7 +117,7 @@ Grouped by HTTP class — every value the API can emit (the Error & Rescue Regis
 | **401** auth | `unauthenticated`, `invalid_credentials`, `mfa_step_expired`, `mfa_invalid_code`, `mfa_invalid_recovery_code`, `mfa_enroll_invalid` |
 | **403** permission | `forbidden`, `forbidden_admin_ops`, `csrf_origin_mismatch` (middleware origin check on mutating API calls) |
 | **404** | `not_found`, `job_not_found`, `customer_not_found`, `dispatch_plan_not_found`, `file_not_found`, **`export_view_unknown`** |
-| **409** conflicts | `stale_job`, `stale_batch`, `import_batch_invalid_state` (duplicate job numbers / PK clashes return 409 with a message but no code) |
+| **409** conflicts | `stale_job`, `stale_batch`, `duplicate_job_number`, `import_batch_invalid_state` |
 | **413** caps | `import_file_too_large` (25 MB), `import_row_cap` (50,000 rows), `export_row_cap` (100,000 rows) |
 | **429** | `rate_limited` (login throttling + import upload throttle, `UPLOAD_RATE_LIMIT` default 100/user/hour) |
 | **F9 legacy shape** | `import_shape_invalid` — jobs-only dump, stock history + audit log missing (frozen copy: export a full localStorage dump) |

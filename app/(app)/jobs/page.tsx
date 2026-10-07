@@ -50,7 +50,9 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
             {jobs.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
-                  No jobs yet. {canEdit ? "Create the first one above." : ""}
+                  {q
+                    ? `No jobs match “${q}”.`
+                    : `No jobs yet. ${canEdit ? "Create the first one above." : ""}`}
                 </td>
               </tr>
             )}
