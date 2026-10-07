@@ -25,6 +25,7 @@ import {
   CODE_FORBIDDEN_ADMIN_OPS,
   MSG_UNAUTHENTICATED,
   CODE_UNAUTHENTICATED,
+  CODE_DUPLICATE_JOB_NUMBER,
 } from "@/lib/errors";
 
 let adminCookie = "";
@@ -114,6 +115,18 @@ describe("error contract — zod/validation failures", () => {
     });
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: MSG_JOB_NOT_FOUND, code: CODE_JOB_NOT_FOUND });
+  });
+});
+
+describe("error contract — conflicts", () => {
+  it("POST jobs: duplicate job number → duplicate_job_number (409, no message-only)", async () => {
+    const jobNumber = "EC-DUP-" + randomUUID().slice(0, 8);
+    const payload = { jobNumber, customerId, lines: [{ skuText: "EC-SKU", qtyOrdered: 5 }] };
+    const first = await createJob(makeRequest("/api/jobs", { method: "POST", cookie: adminCookie, body: payload }));
+    expect(first.status).toBe(201);
+    const second = await createJob(makeRequest("/api/jobs", { method: "POST", cookie: adminCookie, body: payload }));
+    expect(second.status).toBe(409);
+    expect(await second.json()).toEqual({ error: "Job number already exists.", code: CODE_DUPLICATE_JOB_NUMBER });
   });
 });
 

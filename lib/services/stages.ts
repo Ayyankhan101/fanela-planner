@@ -141,6 +141,7 @@ async function patchStageTx(
       throw {
         status: 422,
         message: "Embroidery production is blocked until the current swatch is approved.",
+        code: CODE_VALIDATION_ERROR,
       };
     }
   }
@@ -177,6 +178,7 @@ async function patchStageTx(
     throw {
       status: 422,
       message: "Dispatch stage closes only via explicit finalise dispatch action.",
+      code: CODE_VALIDATION_ERROR,
     };
   }
 

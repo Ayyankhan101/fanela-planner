@@ -203,6 +203,7 @@ export async function finaliseDispatch(
       throw {
         status: 422,
         message: "Every shipment must be final (Dispatched/Collected) or Void before finalising. Abandon with reason to void remaining bookings.",
+        code: CODE_VALIDATION_ERROR,
       };
     }
     if (!input.reason?.trim()) throw { status: 422, message: "Abandon requires a reason.", code: CODE_VALIDATION_ERROR };

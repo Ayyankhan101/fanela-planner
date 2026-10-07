@@ -4,7 +4,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/access";
 import { audit } from "./audit";
 import { appendStockEvent, stockOverview } from "./stock";
-import { CODE_FORBIDDEN, CODE_JOB_NOT_FOUND, CODE_CUSTOMER_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR } from "@/lib/errors";
+import { CODE_FORBIDDEN, CODE_JOB_NOT_FOUND, CODE_CUSTOMER_NOT_FOUND, CODE_STALE_JOB, CODE_VALIDATION_ERROR, CODE_DUPLICATE_JOB_NUMBER } from "@/lib/errors";
 import { computeReadiness, updateReadinessCache } from "./readiness";
 
 export type CreateJobInput = {
@@ -37,7 +37,7 @@ export function normalisePriority(priority?: number, level?: "urgent" | "high" |
 
 export async function createJob(input: CreateJobInput, user: SessionUser): Promise<string> {
   const dup = await query<{ n: string }>(`SELECT count(*)::int AS n FROM jobs WHERE job_number = $1`, [input.jobNumber]);
-  if (Number(dup[0].n) > 0) throw { status: 409, message: "Job number already exists." };
+  if (Number(dup[0].n) > 0) throw { status: 409, message: "Job number already exists.", code: CODE_DUPLICATE_JOB_NUMBER };
 
   const cust = await query<{ id: string; name: string; contact_name: string | null; email: string | null; phone: string | null; default_dispatch_address: string | null; default_dispatch_method: string | null }>(
     `SELECT id, name, contact_name, email, phone, default_dispatch_address, default_dispatch_method
@@ -61,7 +61,7 @@ export async function createJob(input: CreateJobInput, user: SessionUser): Promi
       ],
     );
   } catch (e) {
-    if ((e as { code?: string }).code === "23505") throw { status: 409, message: "Job number already exists." };
+    if ((e as { code?: string }).code === "23505") throw { status: 409, message: "Job number already exists.", code: CODE_DUPLICATE_JOB_NUMBER };
     throw e;
   }
 

@@ -42,7 +42,7 @@ export function Nav({
         <Link href="/dashboard" className="py-1 text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           Fanela
         </Link>
-        <nav className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1">
+        <nav className="order-3 flex w-full min-w-0 flex-wrap gap-x-4 gap-y-1 sm:order-none sm:w-auto sm:flex-1">
           {links.map((l) => (
             <Link
               key={l.href}

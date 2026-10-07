@@ -19,7 +19,6 @@ const LABEL: Record<string, string> = {
   rejected: "Rejected",
   re_swatch: "Re-swatch",
 };
-const DECISIONS = new Set(["approved", "rejected", "re_swatch"]);
 const REASON_REQUIRED = new Set(["rejected", "re_swatch"]);
 
 export function SwatchPanel({
