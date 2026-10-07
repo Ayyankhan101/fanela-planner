@@ -61,7 +61,7 @@ async function swatchPassed(jobId: string): Promise<boolean> {
   return latest[0]?.status === "approved";
 }
 
-// J9 + job lifecycle: every stage Completed (incl. dispatch) → job completed; reopen → back
+// J9 + job lifecycle: every stage Completed (incl. dispatch) → job completed
 export async function refreshJobStatus(jobId: string): Promise<void> {
   const rows = await query<{ total: number; done: number; inprog: number }>(
     `SELECT count(*)::int AS total,
@@ -76,8 +76,6 @@ export async function refreshJobStatus(jobId: string): Promise<void> {
   if (!current || current === "cancelled") return;
   if (r.total > 0 && r.done === r.total) {
     await query(`UPDATE jobs SET status = 'completed', updated_at = now() WHERE id = $1 AND status <> 'completed'`, [jobId]);
-  } else if (current === "completed") {
-    await query(`UPDATE jobs SET status = 'in_production', updated_at = now() WHERE id = $1`, [jobId]);
   } else if (current === "open" && r.inprog > 0) {
     await query(`UPDATE jobs SET status = 'in_production', updated_at = now() WHERE id = $1`, [jobId]);
   }

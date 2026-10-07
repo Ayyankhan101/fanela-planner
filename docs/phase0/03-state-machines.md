@@ -11,6 +11,7 @@ Convention below: `←X` means transition rejected. Terminal states cannot be ed
 ```text
 Open ──(first stage InProgress)──▶ InProduction ──(first shipment dispatched)──▶ PartDispatched
                                                   └─(all stages complete + finalise dispatch)──▶ Completed
+Open ──(shipment dispatched, spec §198)──▶ PartDispatched (direct — no stage worked; register P6)
 Any non-Completed ──(cancel, reason)──▶ Cancelled (status only; record kept)
 Completed → reopen = forbidden (422); correction via new audited event only
 No hard delete — v11 "Archive" maps to status/flag (see register F4)
