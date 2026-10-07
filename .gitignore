@@ -19,6 +19,9 @@ tikz*.pdf
 storage/uploads/
 *.tsbuildinfo
 
+# local instance pid (scripts/start.sh)
+.run/
+
 # regenerable fixture artifacts (node fixtures/generate.mjs)
 fixtures/*.json
 

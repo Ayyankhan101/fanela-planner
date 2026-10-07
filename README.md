@@ -57,6 +57,9 @@ then re-run `npm run db:seed` — the first-run branch in `db/seed.mts` re-arms 
 | `npm run storage:sweep` | Delete orphan uploads past the grace window (runbook §4b) | freed bytes logged | `storage/uploads` reachable; prod cron 03:00 |
 | `npm run outbox:worker` | pg-boss tick every 15 s — claims `integration_outbox` rows (senders gated on D1–D6/X1–X5 — rows sit pending by design) | worker log ticks | runbook §4c; prod launchd `com.fanela.outbox` |
 | `npm run typegen` | Generate `.next/types` route globals (also runs inside `typecheck`) | fresh `.next/types` | `next.config.ts` |
+| `npm run app:start` / `app:stop` / `app:restart` (`./scripts/*.sh` — env `PORT`, default 3000) | Local instance lifecycle: preflight (`.env`, port free, auto-build if no `.next`) → `next start` → health-wait (`/login` 200 + DB probe 401). PID `.run/app.pid`, log `logs/local.log`; `stop` kills only its own recorded pid | `==> up: http://localhost:$PORT` | port busy? missing `.env`? DB probe ≠ 401 → `npm run setup`; `tail logs/local.log` |
+
+**Run locally:** `./scripts/start.sh` → http://localhost:3000 (`PORT=3002 ./scripts/start.sh` to override) · `./scripts/stop.sh` · `./scripts/restart.sh`. Fresh clone: `cp .env.example .env && npm run setup` first; `start.sh` builds automatically when `.next` is missing.
 
 **Deploy:** production deploys via `./scripts/deploy.sh` (git pull → `npm ci` → build → `db:migrate` → `db:security` → launchd restart). Full ops runbook (launchd jobs, backups, monitoring, drills): `docs/ops/runbook.md`.
 
