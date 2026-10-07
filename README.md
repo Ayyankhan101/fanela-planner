@@ -2,6 +2,82 @@
 
 Internal production planner: jobs, customers, stock, dispatch, swatches, shipments, imports and Excel exports. Next.js 16 + PostgreSQL (Drizzle) + vitest.
 
+## Architecture
+
+### Runtime
+
+```mermaid
+flowchart LR
+  subgraph client["Staff browser"]
+    UI["Next.js UI<br/>(App Router, server actions)"]
+  end
+  subgraph prod["launchd — production (:3000)"]
+    APP["com.fanela.app<br/>next start"]
+    OUTBOX["com.fanela.outbox<br/>pg-boss worker, 15 s tick"]
+    MON["uptime probe · nightly backup<br/>L4 integrity · storage sweep 03:00"]
+  end
+  subgraph local["scripts/ — local instance (:3002)"]
+    LIFECYCLE["start.sh / stop.sh / restart.sh<br/>preflight → build → health-wait"]
+  end
+  DB[("PostgreSQL 18 — db `fanela`<br/>RLS + grants, `fanela_app` role")]
+  DEPLOY["./scripts/deploy.sh<br/>pull → ci → build → migrate+security → kickstart"]
+  UI -->|"session cookie + MFA"| APP
+  APP --> DB
+  OUTBOX --> DB
+  LIFECYCLE --> DB
+  MON --> APP
+  DEPLOY --> APP
+```
+
+API calls: two-step login (password → TOTP) issues the `fanela_session` cookie; every mutating request passes the middleware origin check; permissions resolve server-side via `requirePermission` (`docs/phase0/04-permission-matrix.md`).
+
+### Data model (core)
+
+```mermaid
+erDiagram
+  users }o--o{ roles : "user_roles"
+  roles }o--o{ permissions : "role_permissions"
+  departments ||--o{ job_stages : "team"
+  customers ||--o{ jobs : "owns"
+  products ||--o{ product_skus : "catalogue"
+  jobs ||--o{ job_lines : "lines"
+  job_lines ||--o{ job_line_sizes : "sizes"
+  job_lines }o--o| product_skus : "sku"
+  jobs ||--o{ job_stages : "stages"
+  jobs ||--o{ print_positions : "prints"
+  jobs ||--o{ stock_events : "stock"
+  jobs ||--o{ shipments : "ships"
+  shipments ||--o{ shipment_events : "tracking"
+  shipments ||--o{ shipment_attachments : "docs"
+  files ||--o{ shipment_attachments : "uploads"
+  jobs ||--o{ artwork_versions : "artwork"
+  artwork_versions ||--o{ artwork_events : "approvals"
+  jobs ||--o{ swatch_attempts : "swatches"
+  swatch_attempts ||--o{ swatch_attempt_events : "decisions"
+  jobs ||--o{ operational_audit : "trail"
+  users ||--o{ operational_audit : "actor"
+  users ||--o{ notifications : "inbox"
+```
+
+Full model incl. import batches, outbox and secondary tables: `docs/phase0/02-er-model.md` (source: `db/schema/`).
+
+### Job lifecycle
+
+```mermaid
+stateDiagram-v2
+  [*] --> open
+  open --> in_production : first stage in progress
+  in_production --> part_dispatched : first shipment dispatched
+  part_dispatched --> completed : all stages done + dispatch finalised
+  open --> cancelled : cancel + reason
+  in_production --> cancelled : cancel + reason
+  part_dispatched --> cancelled : cancel + reason
+  completed --> [*]
+  cancelled --> [*]
+```
+
+Transitions are server-enforced — invalid move → HTTP 422 + audit gap-log entry; `Completed` cannot reopen (correction = new audited event); no hard delete (`archived` flag only). Stage states (`waiting/ready/in_progress/blocked/completed`) and readiness (`White ⇄ Amber ⇄ Green`, derived cache, never client-set) follow `docs/phase0/03-state-machines.md`.
+
 ## Quickstart (2–5 min cold start)
 
 Prerequisites: **PostgreSQL 18** (Homebrew: `brew install postgresql@18`), Node 26, and a PG role with `CREATEDB` + role-creation rights (the setup scripts create the `fanela_app` role).
