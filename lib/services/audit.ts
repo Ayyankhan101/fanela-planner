@@ -60,7 +60,7 @@ export async function listAudit(
   const isDeptOnly = user.roles.length === 1 && user.roles[0] === "dept";
   const rows = await query<Record<string, unknown>>(
     `SELECT e.id, e.entity_type, e.entity_id, e.job_id, e.action, e.actor_id, e.actor_role,
-            e.before, e.after,
+            e.before, e.after, jb.job_number,
             to_char(e.ts, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS ts,
             CASE e.entity_type
               WHEN 'stage' THEN (SELECT d.key FROM job_stages s JOIN departments d ON d.id = s.department_id WHERE s.id = e.entity_id)
@@ -70,6 +70,7 @@ export async function listAudit(
               ELSE NULL
             END AS dept_key
        FROM operational_audit e
+       LEFT JOIN jobs jb ON jb.id = e.job_id
       WHERE ($1::text IS NULL
             OR lower(e.job_id::text) LIKE lower($1) || '%'
             OR EXISTS (SELECT 1 FROM jobs j WHERE j.id = e.job_id AND j.job_number = $1))

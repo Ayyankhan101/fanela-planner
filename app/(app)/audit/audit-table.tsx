@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { btnCls, errorCls, inputCls, primaryCls, sectionCls, titleCls } from "../ui";
+import { diffAudit, fieldLabel, fmtValue, humanizeAction } from "./diff";
 
 type Rec = Record<string, unknown>;
 
@@ -98,20 +99,19 @@ export function AuditTable() {
                   <td className="py-1.5 pr-4 whitespace-nowrap font-mono text-xs">
                     {String(e.ts).replace("T", " ").slice(0, 16)}
                   </td>
-                  <td className="py-1.5 pr-4">{String(e.action)}</td>
+                  <td className="py-1.5 pr-4">{humanizeAction(String(e.action))}</td>
                   <td className="py-1.5 pr-4 text-xs">
                     {String(e.entity_type)}
                     {e.job_id ? "" : ""}
                   </td>
-                  <td className="py-1.5 pr-4 font-mono text-xs">{e.job_id ? String(e.job_id).slice(0, 8) : "—"}</td>
-                  <td className="py-1.5 pr-4 text-xs">{String(e.actor_role ?? "—")}</td>
+                  <td className="py-1.5 pr-4 font-mono text-xs" title={e.job_id ? String(e.job_id) : undefined}>
+                    {e.job_number ? String(e.job_number) : e.job_id ? String(e.job_id).slice(0, 8) : "—"}
+                  </td>
+                  <td className="py-1.5 pr-4 text-xs">
+                    {String(e.actor_role ?? (e.actor_id ? "—" : "system"))}
+                  </td>
                   <td className="py-1.5 pr-4">
-                    <details>
-                      <summary className="cursor-pointer text-xs text-blue-600 dark:text-blue-400">view</summary>
-                      <pre className="mt-1 max-w-xl overflow-x-auto rounded bg-zinc-50 p-2 text-[10px] text-zinc-600 dark:bg-zinc-900 dark:text-zinc-500">
-                        {JSON.stringify({ before: e.before, after: e.after }, null, 2)}
-                      </pre>
-                    </details>
+                    <DetailsCell before={e.before} after={e.after} />
                   </td>
                 </tr>
               ))}
@@ -126,5 +126,37 @@ export function AuditTable() {
         </button>
       </p>
     </section>
+  );
+}
+
+function DetailsCell({ before, after }: { before: unknown; after: unknown }) {
+  const changes = diffAudit(before, after);
+  const hasPayload = before != null || after != null;
+  if (!hasPayload) return <span className="text-zinc-400">—</span>;
+
+  const summary = changes.length === 0 ? "raw" : `${changes.length} change${changes.length === 1 ? "" : "s"}`;
+
+  return (
+    <details>
+      <summary className="cursor-pointer text-xs text-blue-600 dark:text-blue-400">{summary}</summary>
+      {changes.length > 0 && (
+        <ul className="mt-1 max-w-xl space-y-0.5">
+          {changes.map((c) => (
+            <li key={c.field} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+              <span className="w-36 shrink-0 font-medium text-zinc-700 dark:text-zinc-300">{fieldLabel(c.field)}</span>
+              <span className="text-zinc-500 line-through decoration-zinc-300">{fmtValue(c.from)}</span>
+              <span className="text-zinc-400">→</span>
+              <span className="text-zinc-900 dark:text-zinc-100">{fmtValue(c.to)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <details className="mt-1">
+        <summary className="cursor-pointer text-[10px] text-zinc-400 hover:text-zinc-600">raw JSON</summary>
+        <pre className="mt-1 max-w-xl overflow-x-auto rounded bg-zinc-50 p-2 text-[10px] text-zinc-600 dark:bg-zinc-900 dark:text-zinc-500">
+          {JSON.stringify({ before, after }, null, 2)}
+        </pre>
+      </details>
+    </details>
   );
 }
