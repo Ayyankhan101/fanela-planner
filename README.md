@@ -9,7 +9,7 @@ Internal production planner: jobs, customers, stock, dispatch, swatches, shipmen
 ```mermaid
 flowchart LR
   subgraph client["Staff browser"]
-    UI["Next.js UI<br/>(App Router, server actions)"]
+    UI["Next.js UI<br/>(App Router, route handlers)"]
   end
   subgraph prod["launchd — production (:3000)"]
     APP["com.fanela.app<br/>next start"]
@@ -17,10 +17,10 @@ flowchart LR
     MON["uptime probe · nightly backup<br/>L4 integrity · storage sweep 03:00"]
   end
   subgraph local["scripts/ — local instance (:3002)"]
-    LIFECYCLE["start.sh / stop.sh / restart.sh<br/>preflight → build → health-wait"]
+    LIFECYCLE["start.sh / stop.sh / restart.sh<br/>preflight → auto-build → health-wait"]
   end
   DB[("PostgreSQL 18 — db `fanela`<br/>RLS + grants, `fanela_app` role")]
-  DEPLOY["./scripts/deploy.sh<br/>pull → ci → build → migrate+security → kickstart"]
+  DEPLOY["./scripts/deploy.sh<br/>pull → npm ci → build → migrate → security → kickstart"]
   UI -->|"session cookie + MFA"| APP
   APP --> DB
   OUTBOX --> DB
@@ -50,8 +50,10 @@ erDiagram
   shipments ||--o{ shipment_events : "tracking"
   shipments ||--o{ shipment_attachments : "docs"
   files ||--o{ shipment_attachments : "uploads"
-  jobs ||--o{ artwork_versions : "artwork"
+  jobs ||--o| artworks : "artwork"
+  artworks ||--o{ artwork_versions : "versions"
   artwork_versions ||--o{ artwork_events : "approvals"
+  jobs ||--o| screen_records : "screens"
   jobs ||--o{ swatch_attempts : "swatches"
   swatch_attempts ||--o{ swatch_attempt_events : "decisions"
   jobs ||--o{ operational_audit : "trail"
@@ -64,11 +66,13 @@ Full model incl. import batches, outbox and secondary tables: `docs/phase0/02-er
 ### Job lifecycle
 
 ```mermaid
-stateDiagram-v2
+  stateDiagram-v2
   [*] --> open
   open --> in_production : first stage in progress
+  open --> part_dispatched : shipment dispatched
   in_production --> part_dispatched : first shipment dispatched
-  part_dispatched --> completed : all stages done + dispatch finalised
+  in_production --> completed : all stages done + dispatch finalised
+  part_dispatched --> completed : dispatch finalised, all stages done
   open --> cancelled : cancel + reason
   in_production --> cancelled : cancel + reason
   part_dispatched --> cancelled : cancel + reason
@@ -76,7 +80,7 @@ stateDiagram-v2
   cancelled --> [*]
 ```
 
-Transitions are server-enforced — invalid move → HTTP 422 + audit gap-log entry; `Completed` cannot reopen (correction = new audited event); no hard delete (`archived` flag only). Stage states (`waiting/ready/in_progress/blocked/completed`) and readiness (`White ⇄ Amber ⇄ Green`, derived cache, never client-set) follow `docs/phase0/03-state-machines.md`.
+Transitions are server-enforced — invalid move → HTTP 422 + audit gap-log entry; `Completed` cannot reopen (stage writes rejected, `stages.ts`) and cannot be cancelled (`jobs.ts`); correction = new audited event; no hard delete (`archived` flag only). Stage states (`waiting/ready/in_progress/blocked/completed`) and readiness (`White ⇄ Amber ⇄ Green`, derived cache, never client-set) follow `docs/phase0/03-state-machines.md`.
 
 ## Quickstart (2–5 min cold start)
 
